@@ -63,14 +63,13 @@ class Nse:
         self.get_config()
         self.log() if self.logging else None
         self.units_str: str = 'in K' if self.option_mode == 'Index' else 'in 10s'
+        self.sp1, self.sp2, self.sp3 = 0,0,0
         self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-            'Time', 'Value', f'Call Sum\n({self.units_str})', f'Put Sum\n({self.units_str})',
-            f'Difference\n({self.units_str})', f'Call Boundary\n({self.units_str})',
-            f'Put Boundary\n({self.units_str})', 'Call ITM', 'Put ITM')
-        self.csv_headers: Tuple[str, str, str, str, str, str, str, str, str] = (
-            'Time', 'Value', f'Call Sum ({self.units_str})', f'Put Sum ({self.units_str})',
-            f'Difference ({self.units_str})',
-            f'Call Boundary ({self.units_str})', f'Put Boundary ({self.units_str})', 'Call ITM', 'Put ITM')
+            'Time', f'Call_{self.sp1}',f'profit\nCall_{self.sp1}',
+            f'Put_{self.sp1}', f'profit\nPut_{self.sp1}',
+            f'Call_{self.sp2}', f'profit\nCall_{self.sp2}',
+            f'Put_{self.sp3}', f'profit\nPut_{self.sp3}', 'Net\nProfit')
+        self.csv_headers = self.output_columns
         self.session: requests.Session = requests.Session()
         self.cookies: Dict[str, str] = {}
         self.toaster: win10toast.ToastNotifier = win10toast.ToastNotifier() if is_windows_10 else None
@@ -336,13 +335,12 @@ class Nse:
         response: Optional[requests.Response] = None
         self.units_str = 'in K' if self.option_mode == 'Index' else 'in 10s'
         self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-            'Time', 'Value', f'Call Sum\n({self.units_str})', f'Put Sum\n({self.units_str})',
-            f'Difference\n({self.units_str})', f'Call Boundary\n({self.units_str})',
-            f'Put Boundary\n({self.units_str})', 'Call ITM', 'Put ITM')
-        self.csv_headers: Tuple[str, str, str, str, str, str, str, str, str] = (
-            'Time', 'Value', f'Call Sum ({self.units_str})', f'Put Sum ({self.units_str})',
-            f'Difference ({self.units_str})',
-            f'Call Boundary ({self.units_str})', f'Put Boundary ({self.units_str})', 'Call ITM', 'Put ITM')
+            'Time', f'Call_{self.sp1}',f'profit\nCall_{self.sp1}',
+            f'Put_{self.sp1}', f'profit\nPut_{self.sp1}',
+            f'Call_{self.sp2}', f'profit\nCall_{self.sp2}',
+            f'Put_{self.sp3}', f'profit\nPut_{self.sp3}', 'Net\nProfit')
+        self.csv_headers = self.output_columns
+
         self.round_factor: int = 1000 if self.option_mode == 'Index' else 10
         if self.option_mode == 'Index':
             self.index = self.index_var.get()
@@ -365,8 +363,10 @@ class Nse:
             messagebox.showerror(title="Error", message="Error in fetching dates.\nPlease retry.")
             self.dates.clear()
             self.dates = [""]
-            self.date_menu.config(values=tuple(self.dates))
-            self.date_menu.current(0)
+            self.date_menu1.config(values=tuple(self.dates))
+            self.date_menu1.current(0)
+            self.date_menu2.config(values=tuple(self.dates))
+            self.date_menu2.current(0)
             return
         json_data: Any
         if response is not None:
@@ -383,8 +383,10 @@ class Nse:
             self.dates.clear()
             self.dates = [""]
             try:
-                self.date_menu.config(values=tuple(self.dates))
-                self.date_menu.current(0)
+                self.date_menu1.config(values=tuple(self.dates))
+                self.date_menu1.current(0)
+                self.date_menu2.config(values=tuple(self.dates))
+                self.date_menu2.current(0)
             except TclError as err:
                 print(err, sys.exc_info()[0], "3")
             return
@@ -392,8 +394,10 @@ class Nse:
         for dates in json_data['records']['expiryDates']:
             self.dates.append(dates)
         try:
-            self.date_menu.config(values=tuple(self.dates))
-            self.date_menu.current(0)
+            self.date_menu1.config(values=tuple(self.dates))
+            self.date_menu1.current(0)
+            self.date_menu2.config(values=tuple(self.dates))
+            self.date_menu2.current(0)
         except TclError:
             pass
 
@@ -450,18 +454,15 @@ class Nse:
         window_height: int = self.login.winfo_reqheight()
         position_right: int = int(self.login.winfo_screenwidth() / 2 - window_width / 2)
         position_down: int = int(self.login.winfo_screenheight() / 2 - window_height / 2)
-        self.login.geometry("320x160+{}+{}".format(position_right, position_down))
+        self.login.geometry("520x400+{}+{}".format(position_right, position_down))
         self.login.resizable(False, False)
         self.login.iconphoto(True, PhotoImage(file=self.icon_png_path)) if self.load_nse_icon else None
-        self.login.rowconfigure(0, weight=1)
-        self.login.rowconfigure(1, weight=1)
-        self.login.rowconfigure(2, weight=1)
-        self.login.rowconfigure(3, weight=1)
-        self.login.rowconfigure(4, weight=1)
-        self.login.rowconfigure(5, weight=1)
-        self.login.columnconfigure(0, weight=1)
-        self.login.columnconfigure(1, weight=1)
-        self.login.columnconfigure(2, weight=1)
+
+        rows, cols = 20, 5
+        for i in range(rows):
+            self.login.rowconfigure(i, weight=1)
+        for j in range(cols):
+            self.login.columnconfigure(j, weight=1)
 
         self.intervals_var: StringVar = StringVar()
         self.intervals_var.set(self.intervals[0])
@@ -469,63 +470,149 @@ class Nse:
         self.index_var.set(self.indices[0])
         self.stock_var: StringVar = StringVar()
         self.stock_var.set(self.stocks[0])
-        self.dates_var: StringVar = StringVar()
-        self.dates_var.set(self.dates[0])
 
+        self.dates_var1: StringVar = StringVar()
+        self.dates_var1.set(self.dates[0])
+        self.dates_var2: StringVar = StringVar()
+        self.dates_var2.set(self.dates[0])
+
+        r, c= 0,0
         option_mode_label: Label = Label(self.login, text="Mode: ", justify=LEFT)
-        option_mode_label.grid(row=0, column=0, sticky=N + S + W)
+        option_mode_label.grid(row=r, column=c, sticky=N + S + W)
         self.option_mode_btn: Button = Button(self.login, text=f"{'Index' if self.option_mode == 'Index' else 'Stock'}",
                                               command=self.change_option_mode, width=10)
-        self.option_mode_btn.grid(row=0, column=1, sticky=N + S + E + W)
+        self.option_mode_btn.grid(row=r, column=c+1, sticky=N + S + E + W)
         index_label: Label = Label(self.login, text="Index: ", justify=LEFT)
-        index_label.grid(row=1, column=0, sticky=N + S + W)
+
+        r+=1
+        index_label.grid(row=r, column=c, sticky=N + S + W)
         self.index_menu: Combobox = Combobox(self.login, textvariable=self.index_var, values=self.indices)
         self.index_menu.config(width=15, state='readonly' if self.option_mode == 'Index' else DISABLED)
-        self.index_menu.grid(row=1, column=1, sticky=N + S + E)
+        self.index_menu.grid(row=r, column=c+1, sticky=N + S + E)
         self.index_menu.current(self.indices.index(self.index))
         stock_label: Label = Label(self.login, text="Stock: ", justify=LEFT)
-        stock_label.grid(row=2, column=0, sticky=N + S + W)
+
+        r+=1
+        stock_label.grid(row=r, column=c, sticky=N + S + W)
         self.stock_menu: Combobox = Combobox(self.login, textvariable=self.stock_var, values=self.stocks)
         self.stock_menu.config(width=15, state='readonly' if self.option_mode == 'Stock' else DISABLED)
-        self.stock_menu.grid(row=2, column=1, sticky=N + S + E)
+        self.stock_menu.grid(row=r, column=c+1, sticky=N + S + E)
         self.stock_menu.current(self.stocks.index(self.stock))
-        date_label: Label = Label(self.login, text="Expiry Date: ", justify=LEFT)
-        date_label.grid(row=3, column=0, sticky=N + S + W)
-        self.date_menu: Combobox = Combobox(self.login, textvariable=self.dates_var, state="readonly")
-        self.date_menu.config(width=15)
-        self.date_menu.grid(row=3, column=1, sticky=N + S + E)
-        self.date_get: Button = Button(self.login, text="Refresh", command=self.get_data, width=10)
-        self.date_get.grid(row=3, column=2, sticky=N + S + E + W)
-        sp_label: Label = Label(self.login, text="Strike Price (eg. 14750): ")
-        sp_label.grid(row=4, column=0, sticky=N + S + W)
-        self.sp_entry = Entry(self.login, width=18, relief=SOLID)
-        self.sp_entry.grid(row=4, column=1, sticky=N + S + E)
+
+        r+=1
+        date_label1: Label = Label(self.login, text="Expiry Date1: ", justify=LEFT)
+        date_label1.grid(row=r, column=c, sticky=N + S + W)
+        self.date_menu1: Combobox = Combobox(self.login, textvariable=self.dates_var1, state="readonly")
+        self.date_menu1.config(width=15)
+        self.date_menu1.grid(row=r, column=c+1, sticky=N + S + E)
+        self.date_get1: Button = Button(self.login, text="Refresh", command=self.get_data, width=10)
+        self.date_get1.grid(row=r, column=c+2, sticky=N + S + E + W)
+
+        r+=1
+        date_label2: Label = Label(self.login, text="Expiry Date2: (MONTH END) ", justify=LEFT)
+        date_label2.grid(row=r, column=c, sticky=N + S + W)
+        self.date_menu2: Combobox = Combobox(self.login, textvariable=self.dates_var2, state="readonly")
+        self.date_menu2.config(width=15)
+        self.date_menu2.grid(row=r, column=c+1, sticky=N + S + E)
+        self.date_get2: Button = Button(self.login, text="Refresh", command=self.get_data, width=10)
+        self.date_get2.grid(row=r, column=c+2, sticky=N + S + E + W)
+
+        r+=1
+        sp_label1: Label = Label(self.login, text="Strike Price 1 (eg. 14750): ")
+        sp_label1.grid(row=r, column=0, sticky=N + S + W)
+        self.sp_entry1 = Entry(self.login, width=18, relief=SOLID)
+        self.sp_entry1.grid(row=r, column=1, sticky=N + S + E)
+
+        r+=1
+        val_label1: Label = Label(self.login, text="Market VAL for above CE: ")
+        val_label1.grid(row=r, column=0, sticky=N + S + W)
+        self.val_entry1 = Entry(self.login, width=18, relief=SOLID)
+        self.val_entry1.grid(row=r, column=1, sticky=N + S + E)
+
+        r+=1
+        val_label2: Label = Label(self.login, text="Market VAL for above PE: ")
+        val_label2.grid(row=r, column=0, sticky=N + S + W)
+        self.val_entry2 = Entry(self.login, width=18, relief=SOLID)
+        self.val_entry2.grid(row=r, column=1, sticky=N + S + E)
+
+        r+=1
+        sp_label2: Label = Label(self.login, text="Strike Price 2 (FOR CE): ")
+        sp_label2.grid(row=r, column=0, sticky=N + S + W)
+        self.sp_entry2 = Entry(self.login, width=18, relief=SOLID)
+        self.sp_entry2.grid(row=r, column=1, sticky=N + S + E)
+
+        r+=1
+        val_label3: Label = Label(self.login, text="Market VAL for above CE: ")
+        val_label3.grid(row=r, column=0, sticky=N + S + W)
+        self.val_entry3 = Entry(self.login, width=18, relief=SOLID)
+        self.val_entry3.grid(row=r, column=1, sticky=N + S + E)
+
+        r+=1
+        sp_label3: Label = Label(self.login, text="Strike Price 3 (FOR PE): ")
+        sp_label3.grid(row=r, column=0, sticky=N + S + W)
+        self.sp_entry3 = Entry(self.login, width=18, relief=SOLID)
+        self.sp_entry3.grid(row=r, column=1, sticky=N + S + E)
+
+        r+=1
+        val_label4: Label = Label(self.login, text="Market VAL for above PE: ")
+        val_label4.grid(row=r, column=0, sticky=N + S + W)
+        self.val_entry4 = Entry(self.login, width=18, relief=SOLID)
+        self.val_entry4.grid(row=r, column=1, sticky=N + S + E)
+
+        r+=1
         start_btn: Button = Button(self.login, text="Start", command=self.start, width=10)
-        start_btn.grid(row=4, column=2, rowspan=2, sticky=N + S + E + W)
+        start_btn.grid(row=r, column=2, rowspan=2, sticky=N + S + E + W)
         intervals_label: Label = Label(self.login, text="Refresh Interval (in min): ", justify=LEFT)
-        intervals_label.grid(row=5, column=0, sticky=N + S + W)
+        intervals_label.grid(row=r, column=0, sticky=N + S + W)
         self.intervals_menu: Combobox = Combobox(self.login, textvariable=self.intervals_var,
                                                  values=tuple(self.intervals), state="readonly")
         self.intervals_menu.config(width=15)
-        self.intervals_menu.grid(row=5, column=1, sticky=N + S + E)
+        self.intervals_menu.grid(row=r, column=1, sticky=N + S + E)
         self.intervals_menu.current(self.intervals.index(int(self.seconds / 60)))
-        self.sp_entry.focus_set()
+        self.sp_entry1.focus_set()
+        self.sp_entry2.focus_set()
+        self.sp_entry3.focus_set()
+
+        self.val_entry1.focus_set()
+        self.val_entry2.focus_set()
+        self.val_entry3.focus_set()
+        self.val_entry4.focus_set()
+
         self.get_data()
 
         # noinspection PyUnusedLocal
         def focus_widget(event: Event, mode: int) -> None:
             if mode == 1:
                 self.get_data()
-                self.date_menu.focus_set()
+                self.date_menu1.focus_set()
+                self.date_menu2.focus_set()
+
             elif mode == 2:
-                self.sp_entry.focus_set()
+                self.sp_entry1.focus_set()
+                self.sp_entry2.focus_set()
+                self.sp_entry3.focus_set()
+
+                self.val_entry1.focus_set()
+                self.val_entry2.focus_set()
+                self.val_entry3.focus_set()
+                self.val_entry4.focus_set()
 
         self.index_menu.bind('<Return>', lambda event, a=1: focus_widget(event, a))
         self.index_menu.bind("<<ComboboxSelected>>", self.get_data)
         self.stock_menu.bind('<Return>', lambda event, a=1: focus_widget(event, a))
         self.stock_menu.bind("<<ComboboxSelected>>", self.get_data)
-        self.date_menu.bind('<Return>', lambda event, a=2: focus_widget(event, a))
-        self.sp_entry.bind('<Return>', self.start)
+
+        self.date_menu1.bind('<Return>', lambda event, a=2: focus_widget(event, a))
+        self.date_menu2.bind('<Return>', lambda event, a=2: focus_widget(event, a))
+
+        self.sp_entry1.bind('<Return>', self.start)
+        self.sp_entry2.bind('<Return>', self.start)
+        self.sp_entry3.bind('<Return>', self.start)
+
+        self.val_entry1.bind('<Return>', self.start)
+        self.val_entry2.bind('<Return>', self.start)
+        self.val_entry3.bind('<Return>', self.start)
+        self.val_entry4.bind('<Return>', self.start)
 
         self.login.mainloop()
 
@@ -553,14 +640,31 @@ class Nse:
         self.config_parser.set('main', 'seconds', f'{self.seconds}')
         with open('NSE-OCA.ini', 'w') as f:
             self.config_parser.write(f)
-        self.expiry_date: str = self.dates_var.get()
-        if self.expiry_date == "":
+        self.expiry_date1: str = self.dates_var1.get()
+        self.expiry_date2: str = self.dates_var2.get()
+
+        if self.expiry_date1 == "" or self.expiry_date2 == "":
             messagebox.showerror(title="Error", message="Incorrect Expiry Date.\nPlease enter correct Expiry Date.")
             return
         if self.live_export:
             self.export_row(None)
         try:
-            self.sp: int = int(self.sp_entry.get())
+            self.sp1: int = int(self.sp_entry1.get())
+            self.sp2: int = int(self.sp_entry2.get())
+            self.sp3: int = int(self.sp_entry3.get())
+
+            self.ce_val_1: int = int(self.val_entry1.get())
+            self.pe_val_1: int = int(self.val_entry2.get())
+            self.ce_val_2: int = int(self.val_entry3.get())
+            self.pe_val_3: int = int(self.val_entry4.get())
+
+            self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
+                'Time', f'Call_{self.sp1}',f'profit\nCall_{self.sp1}',
+                f'Put_{self.sp1}', f'profit\nPut_{self.sp1}',
+                f'Call_{self.sp2}', f'profit\nCall_{self.sp2}',
+                f'Put_{self.sp3}', f'profit\nPut_{self.sp3}', 'Net\nProfit')
+            self.csv_headers = self.output_columns
+
             self.login.destroy()
             self.main_win()
         except ValueError as err:
@@ -585,29 +689,27 @@ class Nse:
     def export(self, event: Optional[Event] = None) -> None:
         sheet_data: List[List[str]] = self.sheet.get_sheet_data()
         csv_exists: bool = os.path.isfile(
-            f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date}.csv")
+            f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv")
         try:
             if not csv_exists:
-                with open(f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date}.csv",
+                with open(f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv",
                           "a", newline="") as row:
                     data_writer: csv.writer = csv.writer(row)
                     data_writer.writerow(self.csv_headers)
 
-            with open(f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date}.csv",
+            with open(f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv",
                       "a", newline="") as row:
                 data_writer: csv.writer = csv.writer(row)
                 data_writer.writerows(sheet_data)
 
             messagebox.showinfo(title="Export Successful",
                                 message=f"Data has been exported to NSE-OCA-"
-                                        f"{self.index if self.option_mode == 'Index' else self.stock}-"
-                                        f"{self.expiry_date}.csv.")
+                                        f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv")
         except PermissionError as err:
             print(err, sys.exc_info()[0], "12")
             messagebox.showerror(title="Export Failed",
                                  message=f"Failed to access NSE-OCA-"
-                                         f"{self.index if self.option_mode == 'Index' else self.stock}-"
-                                         f"{self.expiry_date}.csv.\n"
+                                         f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv"
                                          f"Permission Denied. Try closing any apps using it.")
         except Exception as err:
             print(err, sys.exc_info()[0], "8")
@@ -617,12 +719,11 @@ class Nse:
     def export_row(self, values: Optional[List[Union[str, float]]]) -> None:
         if values is None:
             csv_exists: bool = os.path.isfile(
-                f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date}.csv")
+                f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv")
             try:
                 if not csv_exists:
                     with open(
-                            f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-"
-                            f"{self.expiry_date}.csv",
+                            f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv",
                             "a", newline="") as row:
                         data_writer: csv.writer = csv.writer(row)
                         data_writer.writerow(self.csv_headers)
@@ -630,14 +731,13 @@ class Nse:
                 print(err, sys.exc_info()[0], "13")
                 messagebox.showerror(title="Export Failed",
                                      message=f"Failed to access NSE-OCA-"
-                                             f"{self.index if self.option_mode == 'Index' else self.stock}-"
-                                             f"{self.expiry_date}.csv.\n"
+                                             f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv \n"
                                              f"Permission Denied. Try closing any apps using it.")
             except Exception as err:
                 print(err, sys.exc_info()[0], "9")
         else:
             try:
-                with open(f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date}.csv",
+                with open(f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv",
                           "a", newline="") as row:
                     data_writer: csv.writer = csv.writer(row)
                     data_writer.writerow(values)
@@ -645,8 +745,7 @@ class Nse:
                 print(err, sys.exc_info()[0], "14")
                 messagebox.showerror(title="Export Failed",
                                      message=f"Failed to access NSE-OCA-"
-                                             f"{self.index if self.option_mode == 'Index' else self.stock}-"
-                                             f"{self.expiry_date}.csv.\n"
+                                             f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv \n"
                                              f"Permission Denied. Try closing any apps using it.")
             except Exception as err:
                 print(err, sys.exc_info()[0], "15")
@@ -663,8 +762,7 @@ class Nse:
             self.options.entryconfig(self.options.index(2), label="Live Exporting to CSV: On")
             messagebox.showinfo(title="Live Exporting Enabled",
                                 message=f"Data rows will be exported in real time to "
-                                        f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-"
-                                        f"{self.expiry_date}.csv.")
+                                        f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv")
 
         self.config_parser.set('main', 'live_export', f'{self.live_export}')
         with open('NSE-OCA.ini', 'w') as f:
@@ -683,9 +781,7 @@ class Nse:
             self.options.entryconfig(self.options.index(3), label="Dump Entire Option Chain to CSV: On")
             messagebox.showinfo(title="Dump Entire Option Chain Enabled",
                                 message=f"Entire Option Chain data will be exported to "
-                                        f"NSE-OCA-"
-                                        f"{self.index if self.option_mode == 'Index' else self.stock}-"
-                                        f"{self.expiry_date}-Full.csv.")
+                                        f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}-Full.csv")
 
         self.config_parser.set('main', 'save_oc', f'{self.save_oc}')
         with open('NSE-OCA.ini', 'w') as f:
@@ -906,7 +1002,7 @@ class Nse:
         window_height: int = self.root.winfo_reqheight()
         position_right: int = int(self.root.winfo_screenwidth() / 3 - window_width / 2)
         position_down: int = int(self.root.winfo_screenheight() / 3 - window_height / 2)
-        self.root.geometry("815x560+{}+{}".format(position_right, position_down))
+        self.root.geometry("1024x1024+{}+{}".format(position_right, position_down))
         self.root.iconphoto(True, PhotoImage(file=self.icon_png_path)) if self.load_nse_icon else None
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
@@ -953,106 +1049,13 @@ class Nse:
         top_frame.columnconfigure(0, weight=1)
         top_frame.pack(fill="both", expand=True)
 
-        self.sheet: tksheet.Sheet = tksheet.Sheet(top_frame, column_width=85, align="center",
+        self.sheet: tksheet.Sheet = tksheet.Sheet(top_frame, column_width=100, align="center",
                                                   headers=self.output_columns, header_font=("TkDefaultFont", 9, "bold"),
                                                   empty_horizontal=0, empty_vertical=20, header_height=35)
         self.sheet.enable_bindings(
             ("toggle_select", "drag_select", "column_select", "row_select", "column_width_resize",
              "arrowkeys", "right_click_popup_menu", "rc_select", "copy", "select_all"))
         self.sheet.grid(row=0, column=0, sticky=N + S + W + E)
-
-        bottom_frame: Frame = Frame(self.root)
-        bottom_frame.rowconfigure(0, weight=1)
-        bottom_frame.rowconfigure(1, weight=1)
-        bottom_frame.rowconfigure(2, weight=1)
-        bottom_frame.rowconfigure(3, weight=1)
-        bottom_frame.rowconfigure(4, weight=1)
-        bottom_frame.rowconfigure(5, weight=1)
-        bottom_frame.columnconfigure(0, weight=1)
-        bottom_frame.columnconfigure(1, weight=1)
-        bottom_frame.columnconfigure(2, weight=1)
-        bottom_frame.columnconfigure(3, weight=1)
-        bottom_frame.columnconfigure(4, weight=1)
-        bottom_frame.columnconfigure(5, weight=1)
-        bottom_frame.columnconfigure(6, weight=1)
-        bottom_frame.columnconfigure(7, weight=1)
-        bottom_frame.pack(fill="both", expand=True)
-
-        oi_ub_label: Label = Label(bottom_frame, text="Open Interest Upper Boundary", relief=RIDGE,
-                                   font=("TkDefaultFont", 10, "bold"))
-        oi_ub_label.grid(row=0, column=0, columnspan=4, sticky=N + S + W + E)
-        max_call_oi_sp_label: Label = Label(bottom_frame, text="Strike Price 1:", relief=RIDGE,
-                                            font=("TkDefaultFont", 9, "bold"))
-        max_call_oi_sp_label.grid(row=1, column=0, sticky=N + S + W + E)
-        self.max_call_oi_sp_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_call_oi_sp_val.grid(row=1, column=1, sticky=N + S + W + E)
-        max_call_oi_label: Label = Label(bottom_frame, text=f"OI ({self.units_str}):", relief=RIDGE,
-                                         font=("TkDefaultFont", 9, "bold"))
-        max_call_oi_label.grid(row=1, column=2, sticky=N + S + W + E)
-        self.max_call_oi_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_call_oi_val.grid(row=1, column=3, sticky=N + S + W + E)
-        oi_lb_label: Label = Label(bottom_frame, text="Open Interest Lower Boundary", relief=RIDGE,
-                                   font=("TkDefaultFont", 10, "bold"))
-        oi_lb_label.grid(row=0, column=4, columnspan=4, sticky=N + S + W + E)
-        max_put_oi_sp_label: Label = Label(bottom_frame, text="Strike Price 1:", relief=RIDGE,
-                                           font=("TkDefaultFont", 9, "bold"))
-        max_put_oi_sp_label.grid(row=1, column=4, sticky=N + S + W + E)
-        self.max_put_oi_sp_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_put_oi_sp_val.grid(row=1, column=5, sticky=N + S + W + E)
-        max_put_oi_label: Label = Label(bottom_frame, text=f"OI ({self.units_str}):", relief=RIDGE,
-                                        font=("TkDefaultFont", 9, "bold"))
-        max_put_oi_label.grid(row=1, column=6, sticky=N + S + W + E)
-        self.max_put_oi_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_put_oi_val.grid(row=1, column=7, sticky=N + S + W + E)
-        max_call_oi_sp_2_label: Label = Label(bottom_frame, text="Strike Price 2:", relief=RIDGE,
-                                              font=("TkDefaultFont", 9, "bold"))
-        max_call_oi_sp_2_label.grid(row=2, column=0, sticky=N + S + W + E)
-        self.max_call_oi_sp_2_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_call_oi_sp_2_val.grid(row=2, column=1, sticky=N + S + W + E)
-        max_call_oi_2_label: Label = Label(bottom_frame, text=f"OI ({self.units_str}):", relief=RIDGE,
-                                           font=("TkDefaultFont", 9, "bold"))
-        max_call_oi_2_label.grid(row=2, column=2, sticky=N + S + W + E)
-        self.max_call_oi_2_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_call_oi_2_val.grid(row=2, column=3, sticky=N + S + W + E)
-        oi_lb_2_label: Label = Label(bottom_frame, text="Open Interest Lower Boundary", relief=RIDGE,
-                                     font=("TkDefaultFont", 10, "bold"))
-        oi_lb_2_label.grid(row=2, column=4, columnspan=4, sticky=N + S + W + E)
-        max_put_oi_sp_2_label: Label = Label(bottom_frame, text="Strike Price 2:", relief=RIDGE,
-                                             font=("TkDefaultFont", 9, "bold"))
-        max_put_oi_sp_2_label.grid(row=2, column=4, sticky=N + S + W + E)
-        self.max_put_oi_sp_2_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_put_oi_sp_2_val.grid(row=2, column=5, sticky=N + S + W + E)
-        max_put_oi_2_label: Label = Label(bottom_frame, text=f"OI ({self.units_str}):", relief=RIDGE,
-                                          font=("TkDefaultFont", 9, "bold"))
-        max_put_oi_2_label.grid(row=2, column=6, sticky=N + S + W + E)
-        self.max_put_oi_2_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.max_put_oi_2_val.grid(row=2, column=7, sticky=N + S + W + E)
-
-        oi_label: Label = Label(bottom_frame, text="Open Interest:", relief=RIDGE, font=("TkDefaultFont", 9, "bold"))
-        oi_label.grid(row=3, column=0, columnspan=2, sticky=N + S + W + E)
-        self.oi_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.oi_val.grid(row=3, column=2, columnspan=2, sticky=N + S + W + E)
-        pcr_label: Label = Label(bottom_frame, text="PCR:", relief=RIDGE, font=("TkDefaultFont", 9, "bold"))
-        pcr_label.grid(row=3, column=4, columnspan=2, sticky=N + S + W + E)
-        self.pcr_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.pcr_val.grid(row=3, column=6, columnspan=2, sticky=N + S + W + E)
-        call_exits_label: Label = Label(bottom_frame, text="Call Exits:", relief=RIDGE,
-                                        font=("TkDefaultFont", 9, "bold"))
-        call_exits_label.grid(row=4, column=0, columnspan=2, sticky=N + S + W + E)
-        self.call_exits_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.call_exits_val.grid(row=4, column=2, columnspan=2, sticky=N + S + W + E)
-        put_exits_label: Label = Label(bottom_frame, text="Put Exits:", relief=RIDGE, font=("TkDefaultFont", 9, "bold"))
-        put_exits_label.grid(row=4, column=4, columnspan=2, sticky=N + S + W + E)
-        self.put_exits_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.put_exits_val.grid(row=4, column=6, columnspan=2, sticky=N + S + W + E)
-        call_itm_label: Label = Label(bottom_frame, text="Call ITM:", relief=RIDGE, font=("TkDefaultFont", 9, "bold"))
-        call_itm_label.grid(row=5, column=0, columnspan=2, sticky=N + S + W + E)
-        self.call_itm_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.call_itm_val.grid(row=5, column=2, columnspan=2, sticky=N + S + W + E)
-        put_itm_label: Label = Label(bottom_frame, text="Put ITM:", relief=RIDGE, font=("TkDefaultFont", 9, "bold"))
-        put_itm_label.grid(row=5, column=4, columnspan=2, sticky=N + S + W + E)
-        self.put_itm_val: Label = Label(bottom_frame, text="", relief=RIDGE)
-        self.put_itm_val.grid(row=5, column=6, columnspan=2, sticky=N + S + W + E)
 
         self.root.after(100, self.main)
 
@@ -1075,21 +1078,30 @@ class Nse:
         df: pandas.DataFrame = pandas.read_json(response.text)
         df = df.transpose()
 
-        ce_values: List[dict] = [data['CE'] for data in json_data['records']['data'] if
-                                 "CE" in data and str(data['expiryDate'].lower() == str(self.expiry_date).lower())]
-        pe_values: List[dict] = [data['PE'] for data in json_data['records']['data'] if
-                                 "PE" in data and str(data['expiryDate'].lower() == str(self.expiry_date).lower())]
-        points: float = pe_values[0]['underlyingValue']
-        if points == 0:
-            for item in pe_values:
-                if item['underlyingValue'] != 0:
-                    points = item['underlyingValue']
-                    break
-        ce_data: pandas.DataFrame = pandas.DataFrame(ce_values)
-        pe_data: pandas.DataFrame = pandas.DataFrame(pe_values)
-        ce_data_f: pandas.DataFrame = ce_data.loc[ce_data['expiryDate'] == self.expiry_date]
-        pe_data_f: pandas.DataFrame = pe_data.loc[pe_data['expiryDate'] == self.expiry_date]
-        if ce_data_f.empty:
+        ce_values_d1: List[dict] = [data['CE'] for data in json_data['records']['data'] if
+                                 "CE" in data and str(data['expiryDate'].lower() == str(self.expiry_date1).lower())]
+        pe_values_d1: List[dict] = [data['PE'] for data in json_data['records']['data'] if
+                                 "PE" in data and str(data['expiryDate'].lower() == str(self.expiry_date1).lower())]
+
+        ce_values_d2: List[dict] = [data['CE'] for data in json_data['records']['data'] if
+                                 "CE" in data and str(data['expiryDate'].lower() == str(self.expiry_date2).lower())]
+        pe_values_d2: List[dict] = [data['PE'] for data in json_data['records']['data'] if
+                                 "PE" in data and str(data['expiryDate'].lower() == str(self.expiry_date2).lower())]
+
+        ce_data_d1: pandas.DataFrame = pandas.DataFrame(ce_values_d1)
+        pe_data_d1: pandas.DataFrame = pandas.DataFrame(pe_values_d1)
+
+        ce_data_d2: pandas.DataFrame = pandas.DataFrame(ce_values_d2)
+        pe_data_d2: pandas.DataFrame = pandas.DataFrame(pe_values_d2)
+
+        ce_data_f_d1: pandas.DataFrame = ce_data_d1.loc[ce_data_d1['expiryDate'] == self.expiry_date1]
+        pe_data_f_d1: pandas.DataFrame = pe_data_d1.loc[pe_data_d1['expiryDate'] == self.expiry_date1]
+
+        ce_data_f_d2: pandas.DataFrame = ce_data_d2.loc[ce_data_d2['expiryDate'] == self.expiry_date2]
+        pe_data_f_d2: pandas.DataFrame = pe_data_d2.loc[pe_data_d2['expiryDate'] == self.expiry_date2]
+
+
+        if ce_data_f_d1.empty:
             messagebox.showerror(title="Error",
                                  message="Invalid Expiry Date.\nPlease restart and enter a new Expiry Date.")
             self.change_state()
@@ -1099,314 +1111,142 @@ class Nse:
                                  'change', 'bidQty', 'bidprice', 'askPrice', 'askQty', 'strikePrice']
         columns_pe: List[str] = ['strikePrice', 'bidQty', 'bidprice', 'askPrice', 'askQty', 'change', 'lastPrice',
                                  'impliedVolatility', 'totalTradedVolume', 'changeinOpenInterest', 'openInterest']
-        ce_data_f = ce_data_f[columns_ce]
-        pe_data_f = pe_data_f[columns_pe]
-        merged_inner: pandas.DataFrame = pandas.merge(left=ce_data_f, right=pe_data_f, left_on='strikePrice',
+        ce_data_f_d1 = ce_data_f_d1[columns_ce]
+        pe_data_f_d1 = pe_data_f_d1[columns_pe]
+
+        ce_data_f_d2 = ce_data_f_d2[columns_ce]
+        pe_data_f_d2 = pe_data_f_d2[columns_pe]
+
+        merged_inner1: pandas.DataFrame = pandas.merge(left=ce_data_f_d1, right=pe_data_f_d1, left_on='strikePrice',
                                                       right_on='strikePrice')
-        merged_inner.columns = ['Open Interest', 'Change in Open Interest', 'Traded Volume', 'Implied Volatility',
+        merged_inner1.columns = ['Open Interest', 'Change in Open Interest', 'Traded Volume', 'Implied Volatility',
+                                'Last Traded Price', 'Net Change', 'Bid Quantity', 'Bid Price', 'Ask Price',
+                                'Ask Quantity', 'Strike Price', 'Bid Quantity', 'Bid Price', 'Ask Price',
+                                'Ask Quantity', 'Net Change', 'Last Traded Price', 'Implied Volatility',
+                                'Traded Volume', 'Change in Open Interest', 'Open Interest']
+
+        merged_inner2: pandas.DataFrame = pandas.merge(left=ce_data_f_d2, right=pe_data_f_d2, left_on='strikePrice',
+                                                      right_on='strikePrice')
+        merged_inner2.columns = ['Open Interest', 'Change in Open Interest', 'Traded Volume', 'Implied Volatility',
                                 'Last Traded Price', 'Net Change', 'Bid Quantity', 'Bid Price', 'Ask Price',
                                 'Ask Quantity', 'Strike Price', 'Bid Quantity', 'Bid Price', 'Ask Price',
                                 'Ask Quantity', 'Net Change', 'Last Traded Price', 'Implied Volatility',
                                 'Traded Volume', 'Change in Open Interest', 'Open Interest']
         current_time: str = df['timestamp']['records']
-        return merged_inner, current_time, points
+        return merged_inner1, merged_inner2, current_time
 
     def set_values(self) -> None:
         if self.first_run:
             self.root.title(f"NSE-Option-Chain-Analyzer - {self.index if self.option_mode == 'Index' else self.stock} "
-                            f"- {self.expiry_date} - {self.sp}")
+                            f"- {self.expiry_date1} - {self.expiry_date2}")
 
-        self.old_max_call_oi_sp: float
-        self.old_max_call_oi_sp_2: float
-        self.old_max_put_oi_sp: float
-        self.old_max_put_oi_sp_2: float
-
-        self.max_call_oi_val.config(text=self.max_call_oi)
-        self.max_call_oi_sp_val.config(text=self.max_call_oi_sp)
-        self.max_call_oi_2_val.config(text=self.max_call_oi_2)
-        self.max_call_oi_sp_2_val.config(text=self.max_call_oi_sp_2)
-        self.max_put_oi_val.config(text=self.max_put_oi)
-        self.max_put_oi_sp_val.config(text=self.max_put_oi_sp)
-        self.max_put_oi_2_val.config(text=self.max_put_oi_2)
-        self.max_put_oi_sp_2_val.config(text=self.max_put_oi_sp_2)
-
-        if self.first_run or self.old_max_call_oi_sp == self.max_call_oi_sp:
-            self.old_max_call_oi_sp = self.max_call_oi_sp
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Upper Boundary Strike Price changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_max_call_oi_sp} to {self.max_call_oi_sp}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_max_call_oi_sp = self.max_call_oi_sp
-
-        if self.first_run or self.old_max_call_oi_sp_2 == self.max_call_oi_sp_2:
-            self.old_max_call_oi_sp_2 = self.max_call_oi_sp_2
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Upper Boundary Strike Price 2 changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_max_call_oi_sp_2} to {self.max_call_oi_sp_2}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_max_call_oi_sp_2 = self.max_call_oi_sp_2
-
-        if self.first_run or self.old_max_put_oi_sp == self.max_put_oi_sp:
-            self.old_max_put_oi_sp = self.max_put_oi_sp
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Lower Boundary Strike Price changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_max_put_oi_sp} to {self.max_put_oi_sp}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_max_put_oi_sp = self.max_put_oi_sp
-
-        if self.first_run or self.old_max_put_oi_sp_2 == self.max_put_oi_sp_2:
-            self.old_max_put_oi_sp_2 = self.max_put_oi_sp_2
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Lower Boundary Strike Price 2 changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_max_put_oi_sp_2} to {self.max_put_oi_sp_2}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_max_put_oi_sp_2 = self.max_put_oi_sp_2
 
         red: str = "#e53935"
         green: str = "#00e676"
         default: str = "SystemButtonFace" if is_windows else "#d9d9d9"
 
-        bg: str
 
-        self.old_oi_label: str
-        oi_label: str
 
-        if self.call_sum >= self.put_sum:
-            oi_label = "Bearish"
-            bg = red
-        else:
-            oi_label = "Bullish"
-            bg = green
-        self.oi_val.config(text=oi_label, bg=bg)
-
-        if self.first_run or self.old_oi_label == oi_label:
-            self.old_oi_label = oi_label
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Open Interest changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_oi_label} to {oi_label}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_oi_label = oi_label
-
-        if self.put_call_ratio >= 1:
-            self.pcr_val.config(text=self.put_call_ratio, bg=green)
-        else:
-            self.pcr_val.config(text=self.put_call_ratio, bg=red)
-
-        def set_itm_labels(call_change: float, put_change: float) -> str:
-            label: str = "No"
-            if put_change > call_change:
-                if put_change >= 0:
-                    if call_change <= 0:
-                        label = "Yes"
-                    elif put_change / call_change > 1.5:
-                        label = "Yes"
-                else:
-                    if put_change / call_change < 0.5:
-                        label = "Yes"
-            if call_change <= 0:
-                label = "Yes"
-            return label
-
-        self.old_call_label: str
-        call: str = set_itm_labels(call_change=self.p5, put_change=self.p4)
-
-        if call == "No":
-            self.call_itm_val.config(text="No", bg=default)
-        else:
-            self.call_itm_val.config(text="Yes", bg=green)
-
-        if self.first_run or self.old_call_label == call:
-            self.old_call_label = call
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Call ITM changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_call_label} to {call}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_call_label = call
-
-        self.old_put_label: str
-        put: str = set_itm_labels(call_change=self.p7, put_change=self.p6)
-
-        if put == "No":
-            self.put_itm_val.config(text="No", bg=default)
-        else:
-            self.put_itm_val.config(text="Yes", bg=red)
-
-        if self.first_run or self.old_put_label == put:
-            self.old_put_label = put
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Put ITM changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_put_label} to {put}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_put_label = put
-
-        self.old_call_exits_label: str
-        call_exits_label: str
-
-        if self.call_boundary <= 0:
-            call_exits_label = "Yes"
-            bg = green
-        elif self.call_sum <= 0:
-            call_exits_label = "Yes"
-            bg = green
-        else:
-            call_exits_label = "No"
-            bg = default
-
-        self.call_exits_val.config(text=call_exits_label, bg=bg)
-        if self.first_run or self.old_call_exits_label == call_exits_label:
-            self.old_call_exits_label = call_exits_label
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Call Exits changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_call_exits_label} to {call_exits_label}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_call_exits_label = call_exits_label
-
-        self.old_put_exits_label: str
-        put_exits_label: str
-
-        if self.put_boundary <= 0:
-            put_exits_label = "Yes"
-            bg = red
-        elif self.put_sum <= 0:
-            put_exits_label = "Yes"
-            bg = red
-        else:
-            put_exits_label = "No"
-            bg = default
-
-        self.put_exits_val.config(text=put_exits_label, bg=bg)
-        if self.first_run or self.old_put_exits_label == put_exits_label:
-            self.old_put_exits_label = put_exits_label
-        else:
-            if self.notifications:
-                self.toaster.show_toast("Put Exits changed "
-                                        f"for {self.index if self.option_mode == 'Index' else self.stock}",
-                                        f"Changed from {self.old_put_exits_label} to {put_exits_label}",
-                                        duration=4, threaded=True,
-                                        icon_path=self.icon_ico_path if self.load_nse_icon else None)
-            self.old_put_exits_label = put_exits_label
-
-        output_values: List[Union[str, float]] = [self.str_current_time, self.points, self.call_sum,
-                                                  self.put_sum, self.difference,
-                                                  self.call_boundary, self.put_boundary, self.call_itm,
-                                                  self.put_itm]
+        output_values: List[Union[str, float]] = [self.str_current_time, self.ce_ltp_1, self.ce_1_profit,
+                                                  self.pe_ltp_1, self.pe_1_profit,  self.ce_ltp_2, self.ce_2_profit, self.pe_ltp_3, self.pe_3_profit, self.net_profit]
         self.sheet.insert_row(values=output_values)
         if self.live_export:
             self.export_row(output_values)
 
         last_row: int = self.sheet.get_total_rows() - 1
+        
+        c = 1
+        self.old_ce_ltp_1: float
+        if self.first_run or self.old_ce_ltp_1 == self.ce_ltp_1:
+            self.old_ce_ltp_1 = self.ce_ltp_1
+        elif self.ce_ltp_1 > self.old_ce_ltp_1:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+            self.old_ce_ltp_1 = self.ce_ltp_1
+        else:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+            self.old_ce_ltp_1 = self.ce_ltp_1
 
-        self.old_points: float
-        if self.first_run or self.points == self.old_points:
-            self.old_points = self.points
-        elif self.points > self.old_points:
-            self.sheet.highlight_cells(row=last_row, column=1, bg=green)
-            self.old_points = self.points
+        c+=1
+        if self.ce_1_profit >0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+        elif self.ce_1_profit < 0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+
+        c+=1
+        self.old_pe_ltp_1: float
+        if self.first_run or self.old_pe_ltp_1 == self.pe_ltp_1:
+            self.old_pe_ltp_1 = self.pe_ltp_1
+        elif self.pe_ltp_1 > self.old_pe_ltp_1:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+            self.old_pe_ltp_1 = self.pe_ltp_1
         else:
-            self.sheet.highlight_cells(row=last_row, column=1, bg=red)
-            self.old_points = self.points
-        self.old_call_sum: float
-        if self.first_run or self.old_call_sum == self.call_sum:
-            self.old_call_sum = self.call_sum
-        elif self.call_sum > self.old_call_sum:
-            self.sheet.highlight_cells(row=last_row, column=2, bg=red)
-            self.old_call_sum = self.call_sum
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+            self.old_pe_ltp_1 = self.pe_ltp_1
+
+        c+=1
+        if self.pe_1_profit >0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+        elif self.pe_1_profit < 0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+
+        c+=1
+        self.old_ce_ltp_2: float
+        if self.first_run or self.old_ce_ltp_2 == self.ce_ltp_2:
+            self.old_ce_ltp_2 = self.ce_ltp_2
+        elif self.ce_ltp_2 > self.old_ce_ltp_2:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+            self.old_ce_ltp_2 = self.ce_ltp_2
         else:
-            self.sheet.highlight_cells(row=last_row, column=2, bg=green)
-            self.old_call_sum = self.call_sum
-        self.old_put_sum: float
-        if self.first_run or self.old_put_sum == self.put_sum:
-            self.old_put_sum = self.put_sum
-        elif self.put_sum > self.old_put_sum:
-            self.sheet.highlight_cells(row=last_row, column=3, bg=green)
-            self.old_put_sum = self.put_sum
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+            self.old_ce_ltp_2 = self.ce_ltp_2
+
+        c+=1
+        if self.ce_2_profit >0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+        elif self.ce_2_profit < 0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+
+
+        c+=1
+        self.old_pe_ltp_3: float
+        if self.first_run or self.old_pe_ltp_3 == self.pe_ltp_3:
+            self.old_pe_ltp_3 = self.pe_ltp_3
+        elif self.pe_ltp_3 > self.old_pe_ltp_3:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+            self.old_pe_ltp_3 = self.pe_ltp_3
         else:
-            self.sheet.highlight_cells(row=last_row, column=3, bg=red)
-            self.old_put_sum = self.put_sum
-        self.old_difference: float
-        if self.first_run or self.old_difference == self.difference:
-            self.old_difference = self.difference
-        elif self.difference > self.old_difference:
-            self.sheet.highlight_cells(row=last_row, column=4, bg=red)
-            self.old_difference = self.difference
-        else:
-            self.sheet.highlight_cells(row=last_row, column=4, bg=green)
-            self.old_difference = self.difference
-        self.old_call_boundary: float
-        if self.first_run or self.old_call_boundary == self.call_boundary:
-            self.old_call_boundary = self.call_boundary
-        elif self.call_boundary > self.old_call_boundary:
-            self.sheet.highlight_cells(row=last_row, column=5, bg=red)
-            self.old_call_boundary = self.call_boundary
-        else:
-            self.sheet.highlight_cells(row=last_row, column=5, bg=green)
-            self.old_call_boundary = self.call_boundary
-        self.old_put_boundary: float
-        if self.first_run or self.old_put_boundary == self.put_boundary:
-            self.old_put_boundary = self.put_boundary
-        elif self.put_boundary > self.old_put_boundary:
-            self.sheet.highlight_cells(row=last_row, column=6, bg=green)
-            self.old_put_boundary = self.put_boundary
-        else:
-            self.sheet.highlight_cells(row=last_row, column=6, bg=red)
-            self.old_put_boundary = self.put_boundary
-        self.old_call_itm: float
-        if self.first_run or self.old_call_itm == self.call_itm:
-            self.old_call_itm = self.call_itm
-        elif self.call_itm > self.old_call_itm:
-            self.sheet.highlight_cells(row=last_row, column=7, bg=green)
-            self.old_call_itm = self.call_itm
-        else:
-            self.sheet.highlight_cells(row=last_row, column=7, bg=red)
-            self.old_call_itm = self.call_itm
-        self.old_put_itm: float
-        if self.first_run or self.old_put_itm == self.put_itm:
-            self.old_put_itm = self.put_itm
-        elif self.put_itm > self.old_put_itm:
-            self.sheet.highlight_cells(row=last_row, column=8, bg=red)
-            self.old_put_itm = self.put_itm
-        else:
-            self.sheet.highlight_cells(row=last_row, column=8, bg=green)
-            self.old_put_itm = self.put_itm
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+            self.old_pe_ltp_3 = self.pe_ltp_3
+        
+        c+=1
+        if self.pe_3_profit >0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+        elif self.pe_3_profit < 0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
+
+        c+=1
+        if self.net_profit >0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
+        elif self.net_profit < 0:
+            self.sheet.highlight_cells(row=last_row, column=c, bg=red)        
+        
 
         if self.sheet.get_yview()[1] >= 0.9:
             self.sheet.see(last_row)
             self.sheet.set_yview(1)
         self.sheet.refresh()
 
+
+
     def main(self) -> None:
         if self.stop:
             return
 
         try:
-            entire_oc: pandas.DataFrame
+            entire_oc_d1: pandas.DataFrame
+            entire_oc_d2: pandas.DataFrame
             current_time: str
-            self.points: float
-            entire_oc, current_time, self.points = self.get_dataframe()
+            entire_oc_d1, entire_oc_d2, current_time = self.get_dataframe()
         except TypeError:
             self.root.after((self.seconds * 1000), self.main)
             return
@@ -1439,69 +1279,11 @@ class Nse:
                 self.root.after((self.seconds * 1000), self.main)
                 return
 
-        call_oi_list: List[int] = []
-        for i in range(len(entire_oc)):
-            int_call_oi: int = int(entire_oc.iloc[i, [0]][0])
-            call_oi_list.append(int_call_oi)
-        call_oi_index: int = call_oi_list.index(max(call_oi_list))
-        self.max_call_oi: float = round(max(call_oi_list) / self.round_factor, 1)
-        self.max_call_oi_sp: float = float(entire_oc.iloc[call_oi_index]['Strike Price'])
-
-        put_oi_list: List[int] = []
-        for i in range(len(entire_oc)):
-            int_put_oi: int = int(entire_oc.iloc[i, [20]][0])
-            put_oi_list.append(int_put_oi)
-        put_oi_index: int = put_oi_list.index(max(put_oi_list))
-        self.max_put_oi: float = round(max(put_oi_list) / self.round_factor, 1)
-        self.max_put_oi_sp: float = float(entire_oc.iloc[put_oi_index]['Strike Price'])
-
-        sp_range_list: List[float] = []
-        for i in range(put_oi_index, call_oi_index + 1):
-            sp_range_list.append(float(entire_oc.iloc[i]['Strike Price']))
-
-        self.max_call_oi_2: float
-        self.max_call_oi_sp_2: float
-        self.max_put_oi_2: float
-        self.max_put_oi_sp_2: float
-        if self.max_call_oi_sp == self.max_put_oi_sp:
-            self.max_call_oi_2 = self.max_call_oi
-            self.max_call_oi_sp_2 = self.max_call_oi_sp
-            self.max_put_oi_2 = self.max_put_oi
-            self.max_put_oi_sp_2 = self.max_put_oi_sp
-        elif len(sp_range_list) == 2:
-            self.max_call_oi_2 = round((entire_oc[entire_oc['Strike Price'] == self.max_put_oi_sp].iloc[0, 0]) /
-                                       self.round_factor, 1)
-            self.max_call_oi_sp_2 = self.max_put_oi_sp
-            self.max_put_oi_2 = round((entire_oc[entire_oc['Strike Price'] == self.max_call_oi_sp].iloc[0, 20]) /
-                                      self.round_factor, 1)
-            self.max_put_oi_sp_2 = self.max_call_oi_sp
-        else:
-            call_oi_list_2: List[int] = []
-            for i in range(put_oi_index, call_oi_index):
-                int_call_oi_2: int = int(entire_oc.iloc[i, [0]][0])
-                call_oi_list_2.append(int_call_oi_2)
-            call_oi_index_2: int = put_oi_index + call_oi_list_2.index(max(call_oi_list_2))
-            self.max_call_oi_2 = round(max(call_oi_list_2) / self.round_factor, 1)
-            self.max_call_oi_sp_2 = float(entire_oc.iloc[call_oi_index_2]['Strike Price'])
-
-            put_oi_list_2: List[int] = []
-            for i in range(put_oi_index + 1, call_oi_index + 1):
-                int_put_oi_2: int = int(entire_oc.iloc[i, [20]][0])
-                put_oi_list_2.append(int_put_oi_2)
-            put_oi_index_2: int = put_oi_index + 1 + put_oi_list_2.index(max(put_oi_list_2))
-            self.max_put_oi_2 = round(max(put_oi_list_2) / self.round_factor, 1)
-            self.max_put_oi_sp_2 = float(entire_oc.iloc[put_oi_index_2]['Strike Price'])
-
-        total_call_oi: int = sum(call_oi_list)
-        total_put_oi: int = sum(put_oi_list)
-        self.put_call_ratio: float
         try:
-            self.put_call_ratio = round(total_put_oi / total_call_oi, 2)
-        except ZeroDivisionError:
-            self.put_call_ratio = 0
+            index1: int = int(entire_oc_d1[entire_oc_d1['Strike Price'] == self.sp1].index.tolist()[0])
+            index2: int = int(entire_oc_d2[entire_oc_d2['Strike Price'] == self.sp2].index.tolist()[0])
+            index3: int = int(entire_oc_d2[entire_oc_d2['Strike Price'] == self.sp3].index.tolist()[0])
 
-        try:
-            index: int = int(entire_oc[entire_oc['Strike Price'] == self.sp].index.tolist()[0])
         except IndexError as err:
             print(err, sys.exc_info()[0], "10")
             messagebox.showerror(title="Error",
@@ -1509,62 +1291,28 @@ class Nse:
             self.root.destroy()
             return
 
-        a: pandas.DataFrame = entire_oc[['Change in Open Interest']][entire_oc['Strike Price'] == self.sp]
-        b1: pandas.Series = a.iloc[:, 0]
-        c1: int = int(b1.get(index))
-        b2: pandas.Series = entire_oc.iloc[:, 1]
-        c2: int = int(b2.get((index + 1), 'Change in Open Interest'))
-        b3: pandas.Series = entire_oc.iloc[:, 1]
-        c3: int = int(b3.get((index + 2), 'Change in Open Interest'))
-        if isinstance(c2, str):
-            c2 = 0
-        if isinstance(c3, str):
-            c3 = 0
-        self.call_sum: float = round((c1 + c2 + c3) / self.round_factor, 1)
-        if self.call_sum == -0:
-            self.call_sum = 0.0
-        self.call_boundary: float = round(c3 / self.round_factor, 1)
+        entire_oc_sp_1 = entire_oc_d1[entire_oc_d1['Strike Price']==self.sp1]
+        ce_ltp_1 = entire_oc_sp_1['Last Traded Price'].iloc[:,0].get(index1)
+        pe_ltp_1 = entire_oc_sp_1['Last Traded Price'].iloc[:,1].get(index1)
 
-        o1: pandas.Series = a.iloc[:, 1]
-        p1: int = int(o1.get(index))
-        o2: pandas.Series = entire_oc.iloc[:, 19]
-        p2: int = int(o2.get((index + 1), 'Change in Open Interest'))
-        p3: int = int(o2.get((index + 2), 'Change in Open Interest'))
-        self.p4: int = int(o2.get((index + 4), 'Change in Open Interest'))
-        o3: pandas.Series = entire_oc.iloc[:, 1]
-        self.p5: int = int(o3.get((index + 4), 'Change in Open Interest'))
-        self.p6: int = int(o3.get((index - 2), 'Change in Open Interest'))
-        self.p7: int = int(o2.get((index - 2), 'Change in Open Interest'))
-        if isinstance(p2, str):
-            p2 = 0
-        if isinstance(p3, str):
-            p3 = 0
-        if isinstance(self.p4, str):
-            self.p4 = 0
-        if isinstance(self.p5, str):
-            self.p5 = 0
-        self.put_sum: float = round((p1 + p2 + p3) / self.round_factor, 1)
-        self.put_boundary: float = round(p1 / self.round_factor, 1)
-        self.difference: float = round(self.call_sum - self.put_sum, 1)
-        self.call_itm: float
-        if self.p5 == 0:
-            self.call_itm = 0.0
-        else:
-            self.call_itm = round(self.p4 / self.p5, 1)
-            if self.call_itm == -0:
-                self.call_itm = 0.0
-        if isinstance(self.p6, str):
-            self.p6 = 0
-        if isinstance(self.p7, str):
-            self.p7 = 0
-        self.put_itm: float
-        if self.p7 == 0:
-            self.put_itm = 0.0
-        else:
-            self.put_itm = round(self.p6 / self.p7, 1)
-            if self.put_itm == -0:
-                self.put_itm = 0.0
+        entire_oc_sp_2 = entire_oc_d2[entire_oc_d2['Strike Price']==self.sp2]
+        ce_ltp_2 = entire_oc_sp_2['Last Traded Price'].iloc[:,0].get(index2)
 
+        entire_oc_sp_3 = entire_oc_d2[entire_oc_d2['Strike Price']==self.sp3]
+        pe_ltp_3 = entire_oc_sp_3['Last Traded Price'].iloc[:,1].get(index3)
+
+
+        self.pe_ltp_1: float = round(pe_ltp_1, 3)
+        self.ce_ltp_1: float = round(ce_ltp_1, 3)
+        self.ce_ltp_2: float = round(ce_ltp_2, 3)
+        self.pe_ltp_3: float = round(pe_ltp_3, 3)
+
+        self.pe_1_profit = round((self.pe_val_1 - self.pe_ltp_1), 3)
+        self.ce_1_profit = round((self.ce_val_1 - self.ce_ltp_1), 3)
+        self.ce_2_profit = round((self.ce_ltp_2 - self.ce_val_2), 3)
+        self.pe_3_profit = round((self.pe_ltp_3 - self.pe_val_3), 3)
+        self.net_profit = round((self.pe_1_profit + self.ce_1_profit + self.ce_2_profit + self.pe_3_profit), 3)
+        
         if self.stop:
             return
 
@@ -1572,15 +1320,18 @@ class Nse:
 
         if self.save_oc:
             try:
-                entire_oc.to_csv(
-                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date}-Full.csv",
+                entire_oc_d1.to_csv(
+                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-Full.csv",
+                    index=False)
+                entire_oc_d2.to_csv(
+                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date2}-Full.csv",
                     index=False)
             except PermissionError as err:
                 print(err, sys.exc_info()[0], "11")
                 messagebox.showerror(title="Export Failed",
                                      message=f"Failed to access NSE-OCA-"
                                              f"{self.index if self.option_mode == 'Index' else self.stock}-"
-                                             f"{self.expiry_date}-Full.csv.\n"
+                                             f"{self.expiry_date1}-Full.csv.\n"
                                              f"Permission Denied. Try closing any apps using it.")
             except Exception as err:
                 print(err, sys.exc_info()[0], "16")
