@@ -18,8 +18,15 @@ the specified Index or Stock. It also continuously refreshes the Option Chain.
 
 ## Installation:
 
-- Install missing modules using `pip install -r requirements.txt`
-- `python NSE_Option_Chain_Analyzer.py`
+Any one of Method1 or Method2 can be used to run the program.
+1. Method 1
+    - Directly run `NSE_Option_Chain_Analyzer.exe`
+
+
+
+2. Method 2
+    - Install missing modules using `pip install -r requirements.txt`
+    - `python NSE_Option_Chain_Analyzer.py`
 
 ## Usage:
 
@@ -52,9 +59,11 @@ the specified Index or Stock. It also continuously refreshes the Option Chain.
 - Set `load_nse_icon` option to `False` in the configuration file to prevent downloading the NSE icon in the `.py`
   version to speed up loading time
 
+- The executable file is tested on Windows 8 and Windows 10.
+
 ## Dependencies:
 
-- [auto-py-to-exe](https://pypi.org/project/auto-py-to-exe/) is used for compiling the program to a .exe file
+- [pyinstaller](https://pypi.org/project/pyinstaller/) is used for compiling the program to a .exe file
 
 - [beautifulsoup4](https://pypi.org/project/beautifulsoup4/) is used for scraping the list of stocks and indices
 
@@ -118,4 +127,3 @@ the specified Index or Stock. It also continuously refreshes the Option Chain.
     * Debug Logging
 
 - Keyboard shortcuts for all options
-
