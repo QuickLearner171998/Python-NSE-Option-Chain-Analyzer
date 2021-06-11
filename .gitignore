@@ -2,3 +2,4 @@
 .vscode/
 .spyproject/
 NSE-OCA.ini
+__pycache__

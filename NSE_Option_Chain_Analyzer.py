@@ -524,13 +524,13 @@ class Nse:
         self.sp_entry1.grid(row=r, column=1, sticky=N + S + E)
 
         r+=1
-        val_label1: Label = Label(self.login, text="Market VAL for above CE: ")
+        val_label1: Label = Label(self.login, text="SELL VAL for above CE: ")
         val_label1.grid(row=r, column=0, sticky=N + S + W)
         self.val_entry1 = Entry(self.login, width=18, relief=SOLID)
         self.val_entry1.grid(row=r, column=1, sticky=N + S + E)
 
         r+=1
-        val_label2: Label = Label(self.login, text="Market VAL for above PE: ")
+        val_label2: Label = Label(self.login, text="SELL VAL for above PE: ")
         val_label2.grid(row=r, column=0, sticky=N + S + W)
         self.val_entry2 = Entry(self.login, width=18, relief=SOLID)
         self.val_entry2.grid(row=r, column=1, sticky=N + S + E)
@@ -542,7 +542,7 @@ class Nse:
         self.sp_entry2.grid(row=r, column=1, sticky=N + S + E)
 
         r+=1
-        val_label3: Label = Label(self.login, text="Market VAL for above CE: ")
+        val_label3: Label = Label(self.login, text="BUY VAL for above CE: ")
         val_label3.grid(row=r, column=0, sticky=N + S + W)
         self.val_entry3 = Entry(self.login, width=18, relief=SOLID)
         self.val_entry3.grid(row=r, column=1, sticky=N + S + E)
@@ -554,7 +554,7 @@ class Nse:
         self.sp_entry3.grid(row=r, column=1, sticky=N + S + E)
 
         r+=1
-        val_label4: Label = Label(self.login, text="Market VAL for above PE: ")
+        val_label4: Label = Label(self.login, text="BUY VAL for above PE: ")
         val_label4.grid(row=r, column=0, sticky=N + S + W)
         self.val_entry4 = Entry(self.login, width=18, relief=SOLID)
         self.val_entry4.grid(row=r, column=1, sticky=N + S + E)
@@ -653,10 +653,10 @@ class Nse:
             self.sp2: int = int(self.sp_entry2.get())
             self.sp3: int = int(self.sp_entry3.get())
 
-            self.ce_val_1: int = int(self.val_entry1.get())
-            self.pe_val_1: int = int(self.val_entry2.get())
-            self.ce_val_2: int = int(self.val_entry3.get())
-            self.pe_val_3: int = int(self.val_entry4.get())
+            self.ce_val_1: float = float(self.val_entry1.get())
+            self.pe_val_1: float = float(self.val_entry2.get())
+            self.ce_val_2: float = float(self.val_entry3.get())
+            self.pe_val_3: float = float(self.val_entry4.get())
 
             self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
                 'Time', f'Call_{self.sp1}',f'profit\nCall_{self.sp1}',
@@ -1307,10 +1307,10 @@ class Nse:
         self.ce_ltp_2: float = round(ce_ltp_2, 3)
         self.pe_ltp_3: float = round(pe_ltp_3, 3)
 
-        self.pe_1_profit = round((self.pe_val_1 - self.pe_ltp_1), 3)
-        self.ce_1_profit = round((self.ce_val_1 - self.ce_ltp_1), 3)
-        self.ce_2_profit = round((self.ce_ltp_2 - self.ce_val_2), 3)
-        self.pe_3_profit = round((self.pe_ltp_3 - self.pe_val_3), 3)
+        self.pe_1_profit = round((self.pe_val_1 - self.pe_ltp_1)*25, 3)
+        self.ce_1_profit = round((self.ce_val_1 - self.ce_ltp_1)*25, 3)
+        self.ce_2_profit = round((self.ce_ltp_2 - self.ce_val_2)*25, 3)
+        self.pe_3_profit = round((self.pe_ltp_3 - self.pe_val_3)*25, 3)
         self.net_profit = round((self.pe_1_profit + self.ce_1_profit + self.ce_2_profit + self.pe_3_profit), 3)
         
         if self.stop:
