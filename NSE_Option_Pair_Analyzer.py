@@ -1518,47 +1518,33 @@ class Nse:
             data["CE"]
             for data in json_data["records"]["data"]
             if "CE" in data
-            and str(data["expiryDate"].lower() == str(self.expiry_date1).lower())
+            and str(data["expiryDate"].lower()) == str(self.expiry_date1).lower()
         ]
         pe_values_d1: List[dict] = [
             data["PE"]
             for data in json_data["records"]["data"]
             if "PE" in data
-            and str(data["expiryDate"].lower() == str(self.expiry_date1).lower())
+            and str(data["expiryDate"].lower()) == str(self.expiry_date1).lower()
         ]
 
         ce_values_d2: List[dict] = [
             data["CE"]
             for data in json_data["records"]["data"]
             if "CE" in data
-            and str(data["expiryDate"].lower() == str(self.expiry_date2).lower())
+            and str(data["expiryDate"].lower()) == str(self.expiry_date2).lower()
         ]
         pe_values_d2: List[dict] = [
             data["PE"]
             for data in json_data["records"]["data"]
             if "PE" in data
-            and str(data["expiryDate"].lower() == str(self.expiry_date2).lower())
+            and str(data["expiryDate"].lower()) == str(self.expiry_date2).lower()
         ]
 
-        ce_data_d1: pandas.DataFrame = pandas.DataFrame(ce_values_d1)
-        pe_data_d1: pandas.DataFrame = pandas.DataFrame(pe_values_d1)
+        ce_data_f_d1: pandas.DataFrame = pandas.DataFrame(ce_values_d1)
+        pe_data_f_d1: pandas.DataFrame = pandas.DataFrame(pe_values_d1)
 
-        ce_data_d2: pandas.DataFrame = pandas.DataFrame(ce_values_d2)
-        pe_data_d2: pandas.DataFrame = pandas.DataFrame(pe_values_d2)
-
-        ce_data_f_d1: pandas.DataFrame = ce_data_d1.loc[
-            ce_data_d1["expiryDate"] == self.expiry_date1
-        ]
-        pe_data_f_d1: pandas.DataFrame = pe_data_d1.loc[
-            pe_data_d1["expiryDate"] == self.expiry_date1
-        ]
-
-        ce_data_f_d2: pandas.DataFrame = ce_data_d2.loc[
-            ce_data_d2["expiryDate"] == self.expiry_date2
-        ]
-        pe_data_f_d2: pandas.DataFrame = pe_data_d2.loc[
-            pe_data_d2["expiryDate"] == self.expiry_date2
-        ]
+        ce_data_f_d2: pandas.DataFrame = pandas.DataFrame(ce_values_d2)
+        pe_data_f_d2: pandas.DataFrame = pandas.DataFrame(pe_values_d2)
 
         if ce_data_f_d1.empty:
             messagebox.showerror(
@@ -1868,12 +1854,6 @@ class Nse:
             )
             self.root.destroy()
             return
-
-        if self.option_mode == "Index":
-            print(f"CE_{self.sp1}_{self.buy_sell_1_ce}")
-            print(f"PE_{self.sp3}_{self.buy_sell_3_pe}")
-        print(f"PE_{self.sp1}_{self.buy_sell_1_pe}")
-        print(f"CE_{self.sp2}_{self.buy_sell_2_ce}")
 
         entire_oc_sp_1 = entire_oc_d1[entire_oc_d1["Strike Price"] == self.sp1]
         if self.option_mode == "Index":
