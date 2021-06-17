@@ -82,33 +82,17 @@ class Nse:
         }
         self.get_symbols(window)
         self.config_parser: configparser.ConfigParser = configparser.ConfigParser()
-        self.create_config(new=True) if not os.path.isfile("NSE-OCA.ini") else None
+        self.create_config(new=True) if not os.path.isfile(
+            "NSE-OCA.ini") else None
         self.get_config()
         self.log() if self.logging else None
-        self.sp1, self.sp2, self.sp3 = 0, 0, 0
-        self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-            "Time",
-            f"LTP_Call_{self.sp1}",
-            f"profit/loss\nCall_{self.sp1}",
-            f"LTP_Put_{self.sp1}",
-            f"profit/loss\nPut_{self.sp1}",
-            f"LTP_Call_{self.sp2}",
-            f"profit/loss\nCall_{self.sp2}",
-            f"LTP_Put_{self.sp3}",
-            f"profit/loss\nPut_{self.sp3}",
-            "Net\nProfit/Loss",
-        )
-        self.csv_headers = self.output_columns
 
-        self.buy_sell_1_ce = (
-            self.buy_sell_1_pe
-        ) = self.buy_sell_2_ce = self.buy_sell_3_pe = "BUY"
+        self.buy_sell_1_ce = self.buy_sell_1_pe = self.buy_sell_2_ce = self.buy_sell_3_pe = "BUY"
 
         self.session: requests.Session = requests.Session()
         self.cookies: Dict[str, str] = {}
-        self.toaster: win10toast.ToastNotifier = (
-            win10toast.ToastNotifier() if is_windows_10 else None
-        )
+        self.toaster: win10toast.ToastNotifier = win10toast.ToastNotifier(
+        ) if is_windows_10 else None
         self.login_win(window)
 
     def get_symbols(self, window: Tk) -> None:
@@ -122,7 +106,8 @@ class Nse:
             position_down: int = int(
                 error_window.winfo_screenheight() / 2 - window_height / 2
             )
-            error_window.geometry("320x160+{}+{}".format(position_right, position_down))
+            error_window.geometry(
+                "320x160+{}+{}".format(position_right, position_down))
             messagebox.showerror(
                 title="Error",
                 message="Failed to fetch Symbols.\nThe program will now exit.",
@@ -162,7 +147,8 @@ class Nse:
             "</tr>"
         )
         for column in range(4, symbols_table_rows_str.index(divider_row) + 1):
-            cells: bs4.element.ResultSet = symbols_table_rows[column].findChildren("td")
+            cells: bs4.element.ResultSet = symbols_table_rows[column].findChildren(
+                "td")
             column: int = 0
             for cell in cells:
                 if column == 2:
@@ -199,21 +185,27 @@ class Nse:
                 self.create_config(attribute="stock")
                 self.stock: str = self.config_parser.get("main", "stock")
             try:
-                self.option_mode: str = self.config_parser.get("main", "option_mode")
+                self.option_mode: str = self.config_parser.get(
+                    "main", "option_mode")
                 if self.option_mode not in ("Index", "Stock"):
-                    raise ValueError(f"{self.option_mode} is not a valid option mode")
+                    raise ValueError(
+                        f"{self.option_mode} is not a valid option mode")
             except (configparser.NoOptionError, ValueError) as err:
                 print(err, sys.exc_info()[0], "0")
                 self.create_config(attribute="option_mode")
-                self.option_mode: str = self.config_parser.get("main", "option_mode")
+                self.option_mode: str = self.config_parser.get(
+                    "main", "option_mode")
             try:
-                self.seconds: int = self.config_parser.getint("main", "seconds")
+                self.seconds: int = self.config_parser.getint(
+                    "main", "seconds")
                 if self.seconds not in (60, 120, 180, 300, 600, 900):
-                    raise ValueError(f"{self.seconds} is not a refresh interval")
+                    raise ValueError(
+                        f"{self.seconds} is not a refresh interval")
             except (configparser.NoOptionError, ValueError) as err:
                 print(err, sys.exc_info()[0], "0")
                 self.create_config(attribute="seconds")
-                self.seconds: int = self.config_parser.getint("main", "seconds")
+                self.seconds: int = self.config_parser.getint(
+                    "main", "seconds")
             try:
                 self.live_export: bool = self.config_parser.getboolean(
                     "main", "live_export"
@@ -225,11 +217,13 @@ class Nse:
                     "main", "live_export"
                 )
             try:
-                self.save_oc: bool = self.config_parser.getboolean("main", "save_oc")
+                self.save_oc: bool = self.config_parser.getboolean(
+                    "main", "save_oc")
             except (configparser.NoOptionError, ValueError) as err:
                 print(err, sys.exc_info()[0], "0")
                 self.create_config(attribute="save_oc")
-                self.save_oc: bool = self.config_parser.getboolean("main", "save_oc")
+                self.save_oc: bool = self.config_parser.getboolean(
+                    "main", "save_oc")
             try:
                 self.notifications: bool = (
                     self.config_parser.getboolean("main", "notifications")
@@ -256,11 +250,13 @@ class Nse:
                 )
 
             try:
-                self.logging: bool = self.config_parser.getboolean("main", "logging")
+                self.logging: bool = self.config_parser.getboolean(
+                    "main", "logging")
             except (configparser.NoOptionError, ValueError) as err:
                 print(err, sys.exc_info()[0], "0")
                 self.create_config(attribute="logging")
-                self.logging: bool = self.config_parser.getboolean("main", "logging")
+                self.logging: bool = self.config_parser.getboolean(
+                    "main", "logging")
             try:
                 self.warn_late_update: bool = self.config_parser.getboolean(
                     "main", "warn_late_update"
@@ -281,12 +277,7 @@ class Nse:
             self.create_config(corrupted=True)
             return self.get_config()
 
-    def create_config(
-        self,
-        new: bool = False,
-        corrupted: bool = False,
-        attribute: Optional[str] = None,
-    ) -> None:
+    def create_config(self, new: bool = False, corrupted: bool = False, attribute: Optional[str] = None) -> None:
         if new or corrupted:
             if corrupted:
                 os.remove("NSE-OCA.ini")
@@ -301,9 +292,8 @@ class Nse:
             self.config_parser.set("main", "save_oc", "False")
             self.config_parser.set("main", "notifications", "False")
             self.config_parser.set("main", "auto_stop", "False")
-            self.config_parser.set("main", "update", "True")
             self.config_parser.set("main", "logging", "False")
-            self.config_parser.set("main", "warn_late_update", "False")
+            self.config_parser.set("main", "warn_late_update", "True")
         elif attribute is not None:
             if attribute == "index":
                 self.config_parser.set("main", "index", self.indices[0])
@@ -321,18 +311,38 @@ class Nse:
                 "logging",
             ):
                 self.config_parser.set("main", attribute, "False")
-            elif attribute == "update":
-                self.config_parser.set("main", "update", "True")
             elif attribute == "warn_late_update":
-                self.config_parser.set("main", "warn_late_update", "False")
+                self.config_parser.set("main", "warn_late_update", "True")
 
         with open("NSE-OCA.ini", "w") as f:
             self.config_parser.write(f)
 
+    # def check_input(self, event):
+    #     value = event.widget.get()
+    #     if value == '':
+    #         self.index_menu['values'] = self.indices
+    #     else:
+    #         data = []
+    #         for item in self.indices:
+    #             if value.lower() in item.lower():
+    #                 data.append(item)
+
+    #         self.index_menu['values'] = data
+
+    def search(self):
+        value_to_search = self.search_var.get()
+        if value_to_search == "" or value_to_search == " ":
+            self.stock_menu['values'] = self.stocks
+        else:
+            value_to_display = []
+            for value in self.stocks:
+                if value_to_search.lower() in value.lower():
+                    value_to_display.append(value)
+            self.stock_menu['values'] = value_to_display
+
     # noinspection PyUnusedLocal
-    def get_data(
-        self, event: Optional[Event] = None
-    ) -> Optional[Tuple[Optional[requests.Response], Any]]:
+
+    def get_data(self, event: Optional[Event] = None) -> Optional[Tuple[Optional[requests.Response], Any]]:
         if self.first_run:
             return self.get_data_first_run()
         else:
@@ -341,30 +351,6 @@ class Nse:
     def get_data_first_run(self) -> Optional[Tuple[Optional[requests.Response], Any]]:
         request: Optional[requests.Response] = None
         response: Optional[requests.Response] = None
-        if self.option_mode == "Index":
-            self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-                "Time",
-                f"LTP_Call_{self.sp1}",
-                f"profit/loss\nCall_{self.sp1}",
-                f"Put_{self.sp1}",
-                f"profit/loss\nPut_{self.sp1}",
-                f"LTP_Call_{self.sp2}",
-                f"profit/loss\nCall_{self.sp2}",
-                f"Put_{self.sp3}",
-                f"profit/loss\nPut_{self.sp3}",
-                "Net\nprofit/loss",
-            )
-            self.csv_headers = self.output_columns
-        else:
-            self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-                "Time",
-                f"Put_{self.sp1}",
-                f"profit/loss\nPut_{self.sp1}",
-                f"LTP_Call_{self.sp2}",
-                f"profit/loss\nCall_{self.sp2}",
-                "Net\nprofit/loss",
-            )
-            self.csv_headers = self.output_columns
 
         if self.option_mode == "Index":
             self.index = self.index_var.get()
@@ -381,7 +367,8 @@ class Nse:
             else self.url_stock + self.stock
         )
         try:
-            request = self.session.get(self.url_oc, headers=self.headers, timeout=5)
+            request = self.session.get(
+                self.url_oc, headers=self.headers, timeout=5)
             self.cookies = dict(request.cookies)
             response = self.session.get(
                 url, headers=self.headers, timeout=5, cookies=self.cookies
@@ -452,7 +439,8 @@ class Nse:
             if response.status_code == 401:
                 self.session.close()
                 self.session = requests.Session()
-                request = self.session.get(self.url_oc, headers=self.headers, timeout=5)
+                request = self.session.get(
+                    self.url_oc, headers=self.headers, timeout=5)
                 self.cookies = dict(request.cookies)
                 response = self.session.get(
                     url, headers=self.headers, timeout=5, cookies=self.cookies
@@ -465,7 +453,8 @@ class Nse:
             try:
                 self.session.close()
                 self.session = requests.Session()
-                request = self.session.get(self.url_oc, headers=self.headers, timeout=5)
+                request = self.session.get(
+                    self.url_oc, headers=self.headers, timeout=5)
                 self.cookies = dict(request.cookies)
                 response = self.session.get(
                     url, headers=self.headers, timeout=5, cookies=self.cookies
@@ -496,15 +485,17 @@ class Nse:
         self.login.protocol("WM_DELETE_WINDOW", self.close_login)
         window_width: int = self.login.winfo_reqwidth()
         window_height: int = self.login.winfo_reqheight()
-        position_right: int = int(self.login.winfo_screenwidth() / 2 - window_width / 2)
+        position_right: int = int(
+            self.login.winfo_screenwidth() / 2 - window_width / 2)
         position_down: int = int(
             self.login.winfo_screenheight() / 2 - window_height / 2
         )
-        self.login.geometry("600x400+{}+{}".format(position_right, position_down))
+        self.login.geometry(
+            "700x430+{}+{}".format(position_right, position_down))
         self.login.resizable(False, False)
         self.canvas = Canvas(self.login)
 
-        rows, cols = 40, 7
+        rows, cols = 40, 10
         for i in range(rows):
             self.login.rowconfigure(i, weight=1)
         for j in range(cols):
@@ -522,11 +513,14 @@ class Nse:
         self.dates_var2: StringVar = StringVar()
         self.dates_var2.set(self.dates[0])
 
+        self.search_var = StringVar()
+
         r, c = 0, 0
         intermediate_space = 5
 
         # *************************************************************************************MODE*********************************************************************************
-        option_mode_label: Label = Label(self.login, text="Mode: ", justify=LEFT)
+        option_mode_label: Label = Label(
+            self.login, text="Mode: ", justify=LEFT)
         option_mode_label.grid(row=r, column=c, sticky=N + S + W)
         self.option_mode_btn: Button = Button(
             self.login,
@@ -561,6 +555,14 @@ class Nse:
         )
         self.stock_menu.grid(row=r, column=c + 1, sticky=N + S + E)
         self.stock_menu.current(self.stocks.index(self.stock))
+
+        search_entry = Entry(
+            self.login, textvariable=self.search_var, width=10, relief=SOLID)
+        search_entry.grid(row=r, column=c+2, sticky=N + S + E)
+        search_button = Button(self.login, text="search",
+                               command=self.search)
+        search_button.grid(
+            row=r, column=c+3, sticky=N + S + E + W)
         r += intermediate_space
 
         # *******************************************************************************************SP1******************************************************************************
@@ -617,7 +619,8 @@ class Nse:
             width=5,
         )
 
-        self.buy_sell_label_1_ce_btn.grid(row=r, column=5, sticky=N + S + E + W)
+        self.buy_sell_label_1_ce_btn.grid(
+            row=r, column=5, sticky=N + S + E + W)
 
         r += 1
         val_label2: Label = Label(
@@ -648,7 +651,8 @@ class Nse:
             width=5,
         )
 
-        self.buy_sell_label_1_pe_btn.grid(row=r, column=5, sticky=N + S + E + W)
+        self.buy_sell_label_1_pe_btn.grid(
+            row=r, column=5, sticky=N + S + E + W)
 
         # *******************************************************************************************SP2*******************************************************************************************
         r += intermediate_space
@@ -702,7 +706,8 @@ class Nse:
             width=5,
         )
 
-        self.buy_sell_label_2_ce_btn.grid(row=r, column=5, sticky=N + S + E + W)
+        self.buy_sell_label_2_ce_btn.grid(
+            row=r, column=5, sticky=N + S + E + W)
 
         # *******************************************************************************************SP3*******************************************************************************************
         r += intermediate_space
@@ -749,7 +754,8 @@ class Nse:
             width=5,
         )
 
-        self.buy_sell_label_3_pe_btn.grid(row=r, column=5, sticky=N + S + E + W)
+        self.buy_sell_label_3_pe_btn.grid(
+            row=r, column=5, sticky=N + S + E + W)
 
         # **************************************************************************************************************************************************************************************
 
@@ -770,7 +776,8 @@ class Nse:
         )
         self.intervals_menu.config(width=15)
         self.intervals_menu.grid(row=r, column=1, sticky=N + S + E)
-        self.intervals_menu.current(self.intervals.index(int(self.seconds / 60)))
+        self.intervals_menu.current(
+            self.intervals.index(int(self.seconds / 60)))
         self.sp_entry1.focus_set()
         self.sp_entry2.focus_set()
         self.sp_entry3.focus_set()
@@ -809,13 +816,17 @@ class Nse:
                 self.qty_entry3.focus_set()
                 self.qty_entry4.focus_set()
 
-        self.index_menu.bind("<Return>", lambda event, a=1: focus_widget(event, a))
+        self.index_menu.bind("<Return>", lambda event,
+                             a=1: focus_widget(event, a))
         self.index_menu.bind("<<ComboboxSelected>>", self.get_data)
-        self.stock_menu.bind("<Return>", lambda event, a=1: focus_widget(event, a))
+        self.stock_menu.bind("<Return>", lambda event,
+                             a=1: focus_widget(event, a))
         self.stock_menu.bind("<<ComboboxSelected>>", self.get_data)
 
-        self.date_menu1.bind("<Return>", lambda event, a=2: focus_widget(event, a))
-        self.date_menu2.bind("<Return>", lambda event, a=2: focus_widget(event, a))
+        self.date_menu1.bind("<Return>", lambda event,
+                             a=2: focus_widget(event, a))
+        self.date_menu2.bind("<Return>", lambda event,
+                             a=2: focus_widget(event, a))
 
         self.sp_entry1.bind("<Return>", self.start)
         self.sp_entry2.bind("<Return>", self.start)
@@ -947,6 +958,7 @@ class Nse:
                 self.output_columns: Tuple[
                     str, str, str, str, str, str, str, str, str
                 ] = (
+                    "Date",
                     "Time",
                     f"LTP_Call_{self.sp1}",
                     f"profit/loss\nCall_{self.sp1}",
@@ -963,6 +975,7 @@ class Nse:
                 self.output_columns: Tuple[
                     str, str, str, str, str, str, str, str, str
                 ] = (
+                    "Date",
                     "Time",
                     f"LTP_Put_{self.sp1}",
                     f"profit/loss\nPut_{self.sp1}",
@@ -1123,7 +1136,7 @@ class Nse:
             )
             messagebox.showinfo(
                 title="Dump Entire Option Chain Disabled",
-                message=f"Entire Option Chain data will not be exported.",
+                message="Entire Option Chain data will not be exported.",
             )
         else:
             self.save_oc = True
@@ -1144,20 +1157,23 @@ class Nse:
     def toggle_notifications(self, event: Optional[Event] = None) -> None:
         if self.notifications:
             self.notifications = False
-            self.options.entryconfig(self.options.index(4), label="Notifications: Off")
+            self.options.entryconfig(
+                self.options.index(4), label="Notifications: Off")
             messagebox.showinfo(
                 title="Notifications Disabled",
                 message="You will not receive any Notifications.",
             )
         else:
             self.notifications = True
-            self.options.entryconfig(self.options.index(4), label="Notifications: On")
+            self.options.entryconfig(
+                self.options.index(4), label="Notifications: On")
             messagebox.showinfo(
                 title="Notifications Enabled",
                 message="You will receive Notifications when the state of a label changes.",
             )
 
-        self.config_parser.set("main", "notifications", f"{self.notifications}")
+        self.config_parser.set("main", "notifications",
+                               f"{self.notifications}")
         with open("NSE-OCA.ini", "w") as f:
             self.config_parser.write(f)
 
@@ -1207,7 +1223,8 @@ class Nse:
                 message="Program will alert you if the server update time is 5 minutes or more.",
             )
 
-        self.config_parser.set("main", "warn_late_update", f"{self.warn_late_update}")
+        self.config_parser.set("main", "warn_late_update",
+                               f"{self.warn_late_update}")
         with open("NSE-OCA.ini", "w") as f:
             self.config_parser.write(f)
 
@@ -1223,7 +1240,6 @@ class Nse:
 
             try:
                 # noinspection PyProtectedMember,PyUnresolvedReferences
-                base_path: str = sys._MEIPASS
                 print(
                     platform.system()
                     + " "
@@ -1266,7 +1282,8 @@ class Nse:
             sys.stderr = self.stderr
             streamtologger._is_redirected = False
             self.logging = False
-            self.options.entryconfig(self.options.index(9), label="Debug Logging: Off")
+            self.options.entryconfig(
+                self.options.index(9), label="Debug Logging: Off")
             messagebox.showinfo(
                 title="Debug Logging Disabled", message="Errors will not be logged."
             )
@@ -1300,9 +1317,12 @@ class Nse:
         self.info.title("About")
         window_width: int = self.info.winfo_reqwidth()
         window_height: int = self.info.winfo_reqheight()
-        position_right: int = int(self.info.winfo_screenwidth() / 2 - window_width / 2)
-        position_down: int = int(self.info.winfo_screenheight() / 2 - window_height / 2)
-        self.info.geometry("250x150+{}+{}".format(position_right, position_down))
+        position_right: int = int(
+            self.info.winfo_screenwidth() / 2 - window_width / 2)
+        position_down: int = int(
+            self.info.winfo_screenheight() / 2 - window_height / 2)
+        self.info.geometry(
+            "250x150+{}+{}".format(position_right, position_down))
         self.info.resizable(False, False)
         self.info.attributes("-topmost", True)
         self.info.grab_set()
@@ -1330,7 +1350,8 @@ class Nse:
         heading.grid(row=0, column=0, columnspan=2, sticky=N + S + W + E)
         version_label: Label = Label(self.info, text="Version:", relief=RIDGE)
         version_label.grid(row=1, column=0, sticky=N + S + W + E)
-        version_val: Label = Label(self.info, text=f"{Nse.version}", relief=RIDGE)
+        version_val: Label = Label(
+            self.info, text=f"{Nse.version}", relief=RIDGE)
         version_val.grid(row=1, column=1, sticky=N + S + W + E)
         dev_label: Label = Label(self.info, text="Developer:", relief=RIDGE)
         dev_label.grid(row=2, column=0, sticky=N + S + W + E)
@@ -1338,13 +1359,15 @@ class Nse:
             self.info, text="Pramay Singhvi", fg="blue", cursor="hand2", relief=RIDGE
         )
         dev_val.bind(
-            "<Button-1>", lambda click, link="developer": self.links(link, click)
+            "<Button-1>", lambda click, link="developer": self.links(
+                link, click)
         )
         dev_val.grid(row=2, column=1, sticky=N + S + W + E)
         readme: Label = Label(
             self.info, text="README", fg="blue", cursor="hand2", relief=RIDGE
         )
-        readme.bind("<Button-1>", lambda click, link="readme": self.links(link, click))
+        readme.bind("<Button-1>", lambda click,
+                    link="readme": self.links(link, click))
         readme.grid(row=3, column=0, sticky=N + S + W + E)
         licenses: Label = Label(
             self.info, text="LICENSE", fg="blue", cursor="hand2", relief=RIDGE
@@ -1393,9 +1416,12 @@ class Nse:
         self.root.protocol("WM_DELETE_WINDOW", self.close_main)
         window_width: int = self.root.winfo_reqwidth()
         window_height: int = self.root.winfo_reqheight()
-        position_right: int = int(self.root.winfo_screenwidth() / 3 - window_width / 2)
-        position_down: int = int(self.root.winfo_screenheight() / 3 - window_height / 2)
-        self.root.geometry("1024x720+{}+{}".format(position_right, position_down))
+        position_right: int = int(
+            self.root.winfo_screenwidth() / 3 - window_width / 2)
+        position_down: int = int(
+            self.root.winfo_screenheight() / 3 - window_height / 2)
+        self.root.geometry(
+            "1024x720+{}+{}".format(position_right, position_down))
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
 
@@ -1514,39 +1540,25 @@ class Nse:
         df: pandas.DataFrame = pandas.read_json(response.text)
         df = df.transpose()
 
-        ce_values_d1: List[dict] = [
+        ce_values: List[dict] = [
             data["CE"]
             for data in json_data["records"]["data"]
             if "CE" in data
-            and str(data["expiryDate"].lower()) == str(self.expiry_date1).lower()
+            and (str(data["expiryDate"].lower()) == str(self.expiry_date1).lower() or
+                 str(data["expiryDate"].lower()) == str(self.expiry_date2).lower())
         ]
-        pe_values_d1: List[dict] = [
+        pe_values: List[dict] = [
             data["PE"]
             for data in json_data["records"]["data"]
             if "PE" in data
-            and str(data["expiryDate"].lower()) == str(self.expiry_date1).lower()
+            and (str(data["expiryDate"].lower()) == str(self.expiry_date1).lower() or
+                 str(data["expiryDate"].lower()) == str(self.expiry_date2).lower())
         ]
 
-        ce_values_d2: List[dict] = [
-            data["CE"]
-            for data in json_data["records"]["data"]
-            if "CE" in data
-            and str(data["expiryDate"].lower()) == str(self.expiry_date2).lower()
-        ]
-        pe_values_d2: List[dict] = [
-            data["PE"]
-            for data in json_data["records"]["data"]
-            if "PE" in data
-            and str(data["expiryDate"].lower()) == str(self.expiry_date2).lower()
-        ]
+        ce_data_f: pandas.DataFrame = pandas.DataFrame(ce_values)
+        pe_data_f: pandas.DataFrame = pandas.DataFrame(pe_values)
 
-        ce_data_f_d1: pandas.DataFrame = pandas.DataFrame(ce_values_d1)
-        pe_data_f_d1: pandas.DataFrame = pandas.DataFrame(pe_values_d1)
-
-        ce_data_f_d2: pandas.DataFrame = pandas.DataFrame(ce_values_d2)
-        pe_data_f_d2: pandas.DataFrame = pandas.DataFrame(pe_values_d2)
-
-        if ce_data_f_d1.empty:
+        if ce_data_f.empty or pe_data_f.empty:
             messagebox.showerror(
                 title="Error",
                 message="Invalid Expiry Date.\nPlease restart and enter a new Expiry Date.",
@@ -1554,98 +1566,40 @@ class Nse:
             self.change_state()
             return
         columns_ce: List[str] = [
-            "openInterest",
-            "changeinOpenInterest",
+            "expiryDate",
             "totalTradedVolume",
-            "impliedVolatility",
             "lastPrice",
-            "change",
-            "bidQty",
-            "bidprice",
-            "askPrice",
-            "askQty",
             "strikePrice",
         ]
         columns_pe: List[str] = [
+            "expiryDate",
             "strikePrice",
-            "bidQty",
-            "bidprice",
-            "askPrice",
-            "askQty",
-            "change",
             "lastPrice",
-            "impliedVolatility",
             "totalTradedVolume",
-            "changeinOpenInterest",
-            "openInterest",
         ]
-        ce_data_f_d1 = ce_data_f_d1[columns_ce]
-        pe_data_f_d1 = pe_data_f_d1[columns_pe]
+        ce_data_f = ce_data_f[columns_ce]
+        pe_data_f = pe_data_f[columns_pe]
 
-        ce_data_f_d2 = ce_data_f_d2[columns_ce]
-        pe_data_f_d2 = pe_data_f_d2[columns_pe]
-
-        merged_inner1: pandas.DataFrame = pandas.merge(
-            left=ce_data_f_d1,
-            right=pe_data_f_d1,
-            left_on="strikePrice",
-            right_on="strikePrice",
+        merged_inner: pandas.DataFrame = pandas.merge(
+            left=ce_data_f,
+            right=pe_data_f,
+            left_on=["expiryDate", "strikePrice"],
+            right_on=["expiryDate", "strikePrice"],
         )
-        merged_inner1.columns = [
-            "Open Interest",
-            "Change in Open Interest",
-            "Traded Volume",
-            "Implied Volatility",
-            "Last Traded Price",
-            "Net Change",
-            "Bid Quantity",
-            "Bid Price",
-            "Ask Price",
-            "Ask Quantity",
+        merged_inner.columns = [
+            "expiry",
+            "Traded Volume CE",
+            "Last Traded Price CE",
             "Strike Price",
-            "Bid Quantity",
-            "Bid Price",
-            "Ask Price",
-            "Ask Quantity",
-            "Net Change",
-            "Last Traded Price",
-            "Implied Volatility",
-            "Traded Volume",
-            "Change in Open Interest",
-            "Open Interest",
+            "Last Traded Price PE",
+            "Traded Volume PE",
         ]
 
-        merged_inner2: pandas.DataFrame = pandas.merge(
-            left=ce_data_f_d2,
-            right=pe_data_f_d2,
-            left_on="strikePrice",
-            right_on="strikePrice",
-        )
-        merged_inner2.columns = [
-            "Open Interest",
-            "Change in Open Interest",
-            "Traded Volume",
-            "Implied Volatility",
-            "Last Traded Price",
-            "Net Change",
-            "Bid Quantity",
-            "Bid Price",
-            "Ask Price",
-            "Ask Quantity",
-            "Strike Price",
-            "Bid Quantity",
-            "Bid Price",
-            "Ask Price",
-            "Ask Quantity",
-            "Net Change",
-            "Last Traded Price",
-            "Implied Volatility",
-            "Traded Volume",
-            "Change in Open Interest",
-            "Open Interest",
-        ]
+        del ce_data_f, ce_values
+        del pe_data_f, pe_values
+
         current_time: str = df["timestamp"]["records"]
-        return merged_inner1, merged_inner2, current_time
+        return merged_inner, current_time
 
     def set_values(self) -> None:
         if self.first_run:
@@ -1656,10 +1610,10 @@ class Nse:
 
         red: str = "#e53935"
         green: str = "#00e676"
-        default: str = "SystemButtonFace" if is_windows else "#d9d9d9"
 
         if self.option_mode == "Index":
             output_values: List[Union[str, float]] = [
+                self.str_current_date,
                 self.str_current_time,
                 self.ce_ltp_1,
                 self.ce_1_profit,
@@ -1673,6 +1627,7 @@ class Nse:
             ]
         else:
             output_values: List[Union[str, float]] = [
+                self.str_current_date,
                 self.str_current_time,
                 self.pe_ltp_1,
                 self.pe_1_profit,
@@ -1779,14 +1734,14 @@ class Nse:
             return
 
         try:
-            entire_oc_d1: pandas.DataFrame
-            entire_oc_d2: pandas.DataFrame
+            entire_oc: pandas.DataFrame
             current_time: str
-            entire_oc_d1, entire_oc_d2, current_time = self.get_dataframe()
+            entire_oc, current_time = self.get_dataframe()
         except TypeError:
             self.root.after((self.seconds * 1000), self.main)
             return
 
+        self.str_current_date: str = current_time.split(" ")[0]
         self.str_current_time: str = current_time.split(" ")[1]
         current_date: datetime.date = datetime.datetime.strptime(
             current_time.split(" ")[0], "%d-%b-%Y"
@@ -1807,7 +1762,8 @@ class Nse:
                     time_difference = (
                         (60 - self.previous_time.minute)
                         + current_time.minute
-                        + ((60 - self.previous_time.second) + current_time.second) / 60
+                        + ((60 - self.previous_time.second) +
+                           current_time.second) / 60
                     )
                 elif current_time.hour == self.previous_time.hour:
                     time_difference = (
@@ -1833,18 +1789,19 @@ class Nse:
                 return
 
         try:
-            index1: int = int(
-                entire_oc_d1[entire_oc_d1["Strike Price"] == self.sp1].index.tolist()[0]
-            )
-            index2: int = int(
-                entire_oc_d2[entire_oc_d2["Strike Price"] == self.sp2].index.tolist()[0]
-            )
+
+            entire_oc_sp_1: pandas.DataFrame = entire_oc[(
+                entire_oc["Strike Price"] == self.sp1) & (entire_oc["expiry"] == self.expiry_date1)]
+            entire_oc_sp_2: pandas.DataFrame = entire_oc[(
+                entire_oc["Strike Price"] == self.sp2) & (entire_oc["expiry"] == self.expiry_date2)]
+
+            index1: int = int(entire_oc_sp_1.index.tolist()[0])
+            index2: int = int(entire_oc_sp_2.index.tolist()[0])
+
             if self.option_mode == "Index":
-                index3: int = int(
-                    entire_oc_d2[
-                        entire_oc_d2["Strike Price"] == self.sp3
-                    ].index.tolist()[0]
-                )
+                entire_oc_sp_3: pandas.DataFrame = entire_oc[(
+                    entire_oc["Strike Price"] == self.sp3) & (entire_oc["expiry"] == self.expiry_date2)]
+                index3: int = int(entire_oc_sp_3.index.tolist()[0])
 
         except IndexError as err:
             print(err, sys.exc_info()[0], "10")
@@ -1855,17 +1812,14 @@ class Nse:
             self.root.destroy()
             return
 
-        entire_oc_sp_1 = entire_oc_d1[entire_oc_d1["Strike Price"] == self.sp1]
         if self.option_mode == "Index":
-            ce_ltp_1 = entire_oc_sp_1["Last Traded Price"].iloc[:, 0].get(index1)
-        pe_ltp_1 = entire_oc_sp_1["Last Traded Price"].iloc[:, 1].get(index1)
+            ce_ltp_1 = entire_oc_sp_1["Last Traded Price CE"].get(index1)
+        pe_ltp_1 = entire_oc_sp_1["Last Traded Price PE"].get(index1)
 
-        entire_oc_sp_2 = entire_oc_d2[entire_oc_d2["Strike Price"] == self.sp2]
-        ce_ltp_2 = entire_oc_sp_2["Last Traded Price"].iloc[:, 0].get(index2)
+        ce_ltp_2 = entire_oc_sp_2["Last Traded Price CE"].get(index2)
 
         if self.option_mode == "Index":
-            entire_oc_sp_3 = entire_oc_d2[entire_oc_d2["Strike Price"] == self.sp3]
-            pe_ltp_3 = entire_oc_sp_3["Last Traded Price"].iloc[:, 1].get(index3)
+            pe_ltp_3 = entire_oc_sp_3["Last Traded Price PE"].get(index3)
 
         self.pe_ltp_1: float = round(pe_ltp_1, 3)
         self.ce_ltp_2: float = round(ce_ltp_2, 3)
@@ -1879,10 +1833,12 @@ class Nse:
                 (self.pe_val_1 - self.pe_ltp_1) * self.qty1_pe, 3
             )
         else:
-            self.pe_1_profit = round((self.pe_val_1 - self.pe_ltp_1) * self.qty1_pe, 3)
+            self.pe_1_profit = round(
+                (self.pe_val_1 - self.pe_ltp_1) * self.qty1_pe, 3)
 
         if self.buy_sell_2_ce == "BUY":
-            self.ce_2_profit = round((self.ce_ltp_2 - self.ce_val_2) * self.qty2_ce, 3)
+            self.ce_2_profit = round(
+                (self.ce_ltp_2 - self.ce_val_2) * self.qty2_ce, 3)
         else:
             self.ce_2_profit = -1 * round(
                 (self.ce_ltp_2 - self.ce_val_2) * self.qty2_ce, 3
@@ -1927,14 +1883,11 @@ class Nse:
 
         if self.save_oc:
             try:
-                entire_oc_d1.to_csv(
-                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-Full.csv",
+                entire_oc.to_csv(
+                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-Full.csv",
                     index=False,
                 )
-                entire_oc_d2.to_csv(
-                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date2}-Full.csv",
-                    index=False,
-                )
+
             except PermissionError as err:
                 print(err, sys.exc_info()[0], "11")
                 messagebox.showerror(
