@@ -32,6 +32,7 @@ from tkinter import (
 from tkinter.ttk import Combobox, Button
 from typing import Union, Optional, List, Dict, Tuple, TextIO, Any
 
+import bs4
 import pandas
 import requests
 import streamtologger
@@ -50,7 +51,7 @@ class Nse:
     beta: Tuple[bool, int] = (False, 0)
 
     def __init__(self, window: Tk) -> None:
-        self.intervals = [0.5, 1, 2, 3, 5, 10, 15]
+        self.intervals: List[int] = [1, 2, 3, 5, 10, 15]
         self.stdout: TextIO = sys.stdout
         self.stderr: TextIO = sys.stderr
         self.previous_date: Optional[datetime.date] = None
@@ -59,20 +60,20 @@ class Nse:
         self.first_run: bool = True
         self.stop: bool = False
         self.dates: List[str] = [""]
-        self.indices: List[str] = ["NIFTY", "BANKNIFTY", "FINNIFTY"]
+        self.indices: List[str] = []
         self.stocks: List[str] = []
         self.url_oc: str = "https://www.nseindia.com/option-chain"
         self.url_index: str = (
             "https://www.nseindia.com/api/option-chain-indices?symbol="
         )
-
         self.url_stock: str = (
             "https://www.nseindia.com/api/option-chain-equities?symbol="
         )
-        self.url_symbols_nifty50: str = (
-            "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
+        self.url_symbols: str = (
+            "https://www.nseindia.com/products-services/"
+            "equity-derivatives-list-underlyings-information"
         )
-        self.url_symbols_index: str = "https://www.nseindia.com/products-services/equity-derivatives-list-underlyings-information"
+
         self.headers: Dict[str, str] = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
             "like Gecko) Chrome/80.0.3987.149 Safari/537.36",
@@ -86,7 +87,6 @@ class Nse:
         self.log() if self.logging else None
         self.sp1, self.sp2, self.sp3 = 0, 0, 0
         self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-            "Date",
             "Time",
             f"LTP_Call_{self.sp1}",
             f"profit/loss\nCall_{self.sp1}",
@@ -130,12 +130,53 @@ class Nse:
             error_window.destroy()
 
         try:
-            symbols = pandas.read_csv(self.url_symbols_nifty50, sep=",")
+            symbols_information: requests.Response = requests.get(
+                self.url_symbols, headers=self.headers
+            )
         except Exception as err:
             print(err, sys.exc_info()[0], "19")
             create_error_window(window)
             sys.exit()
-        self.stocks = symbols["Symbol"].values.tolist()
+        symbols_information_soup: bs4.BeautifulSoup = bs4.BeautifulSoup(
+            symbols_information.content, "html.parser"
+        )
+        try:
+            symbols_table: bs4.element.Tag = symbols_information_soup.findChildren(
+                "table"
+            )[0]
+        except IndexError as err:
+            print(err, sys.exc_info()[0], "20")
+            create_error_window(window)
+            sys.exit()
+        symbols_table_rows: List[bs4.element.Tag] = list(
+            symbols_table.findChildren(["th", "tr"])
+        )
+        symbols_table_rows_str: List[str] = [
+            "" for _ in range(len(symbols_table_rows) - 1)
+        ]
+        for column in range(len(symbols_table_rows) - 1):
+            symbols_table_rows_str[column] = str(symbols_table_rows[column])
+        divider_row: str = (
+            "<tr>\n"
+            '<td colspan="3"><strong>Derivatives on Individual Securities</strong></td>\n'
+            "</tr>"
+        )
+        for column in range(4, symbols_table_rows_str.index(divider_row) + 1):
+            cells: bs4.element.ResultSet = symbols_table_rows[column].findChildren("td")
+            column: int = 0
+            for cell in cells:
+                if column == 2:
+                    self.indices.append(cell.string)
+                column += 1
+        for column in reversed(range(symbols_table_rows_str.index(divider_row) + 1)):
+            symbols_table_rows.pop(column)
+        for row in symbols_table_rows:
+            cells: bs4.element.ResultSet = row.findChildren("td")
+            column: int = 0
+            for cell in cells:
+                if column == 2:
+                    self.stocks.append(cell.string)
+                column += 1
 
     def get_config(self) -> None:
         try:
@@ -167,7 +208,7 @@ class Nse:
                 self.option_mode: str = self.config_parser.get("main", "option_mode")
             try:
                 self.seconds: int = self.config_parser.getint("main", "seconds")
-                if self.seconds not in (30, 60, 120, 180, 300, 600, 900):
+                if self.seconds not in (60, 120, 180, 300, 600, 900):
                     raise ValueError(f"{self.seconds} is not a refresh interval")
             except (configparser.NoOptionError, ValueError) as err:
                 print(err, sys.exc_info()[0], "0")
@@ -302,7 +343,6 @@ class Nse:
         response: Optional[requests.Response] = None
         if self.option_mode == "Index":
             self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-                "Date",
                 "Time",
                 f"LTP_Call_{self.sp1}",
                 f"profit/loss\nCall_{self.sp1}",
@@ -317,7 +357,6 @@ class Nse:
             self.csv_headers = self.output_columns
         else:
             self.output_columns: Tuple[str, str, str, str, str, str, str, str, str] = (
-                "Date",
                 "Time",
                 f"Put_{self.sp1}",
                 f"profit/loss\nPut_{self.sp1}",
@@ -731,7 +770,7 @@ class Nse:
         )
         self.intervals_menu.config(width=15)
         self.intervals_menu.grid(row=r, column=1, sticky=N + S + E)
-        self.intervals_menu.current(self.intervals.index((self.seconds / 60)))
+        self.intervals_menu.current(self.intervals.index(int(self.seconds / 60)))
         self.sp_entry1.focus_set()
         self.sp_entry2.focus_set()
         self.sp_entry3.focus_set()
@@ -873,7 +912,7 @@ class Nse:
 
     # noinspection PyUnusedLocal
     def start(self, event: Optional[Event] = None) -> None:
-        self.seconds = int(float(self.intervals_var.get()) * 60)
+        self.seconds = int(self.intervals_var.get()) * 60
         self.config_parser.set("main", "seconds", f"{self.seconds}")
         with open("NSE-OCA.ini", "w") as f:
             self.config_parser.write(f)
@@ -908,7 +947,6 @@ class Nse:
                 self.output_columns: Tuple[
                     str, str, str, str, str, str, str, str, str
                 ] = (
-                    "Date",
                     "Time",
                     f"LTP_Call_{self.sp1}",
                     f"profit/loss\nCall_{self.sp1}",
@@ -925,7 +963,6 @@ class Nse:
                 self.output_columns: Tuple[
                     str, str, str, str, str, str, str, str, str
                 ] = (
-                    "Date",
                     "Time",
                     f"LTP_Put_{self.sp1}",
                     f"profit/loss\nPut_{self.sp1}",
@@ -1637,7 +1674,6 @@ class Nse:
 
         if self.option_mode == "Index":
             output_values: List[Union[str, float]] = [
-                self.current_date,
                 self.str_current_time,
                 self.ce_ltp_1,
                 self.ce_1_profit,
@@ -1651,7 +1687,6 @@ class Nse:
             ]
         else:
             output_values: List[Union[str, float]] = [
-                self.current_date,
                 self.str_current_time,
                 self.pe_ltp_1,
                 self.pe_1_profit,
@@ -1763,15 +1798,13 @@ class Nse:
             current_time: str
             entire_oc_d1, entire_oc_d2, current_time = self.get_dataframe()
         except TypeError:
-            print("ERRRRR_main")
-            self.root.after((self.seconds), self.main)
+            self.root.after((self.seconds * 1000), self.main)
             return
 
         self.str_current_time: str = current_time.split(" ")[1]
         current_date: datetime.date = datetime.datetime.strptime(
             current_time.split(" ")[0], "%d-%b-%Y"
         ).date()
-        self.current_date = current_date
         current_time: datetime.time = datetime.datetime.strptime(
             current_time.split(" ")[1], "%H:%M:%S"
         ).time()
@@ -1810,7 +1843,7 @@ class Nse:
                     )
                 self.previous_time = current_time
             else:
-                self.root.after((self.seconds), self.main)
+                self.root.after((self.seconds * 1000), self.main)
                 return
 
         try:
@@ -1835,6 +1868,12 @@ class Nse:
             )
             self.root.destroy()
             return
+
+        if self.option_mode == "Index":
+            print(f"CE_{self.sp1}_{self.buy_sell_1_ce}")
+            print(f"PE_{self.sp3}_{self.buy_sell_3_pe}")
+        print(f"PE_{self.sp1}_{self.buy_sell_1_pe}")
+        print(f"CE_{self.sp2}_{self.buy_sell_2_ce}")
 
         entire_oc_sp_1 = entire_oc_d1[entire_oc_d1["Strike Price"] == self.sp1]
         if self.option_mode == "Index":
@@ -1945,7 +1984,7 @@ class Nse:
                 title="Market Closed", message="Retrieving new data has been stopped."
             )
             return
-        self.root.after((self.seconds), self.main)
+        self.root.after((self.seconds * 1000), self.main)
         return
 
     @staticmethod
