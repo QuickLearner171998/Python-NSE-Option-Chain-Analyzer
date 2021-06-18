@@ -1421,7 +1421,7 @@ class Nse:
         position_down: int = int(
             self.root.winfo_screenheight() / 3 - window_height / 2)
         self.root.geometry(
-            "1024x720+{}+{}".format(position_right, position_down))
+            "1376x1024+{}+{}".format(position_right, position_down))
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
 
@@ -1642,7 +1642,7 @@ class Nse:
 
         last_row: int = self.sheet.get_total_rows() - 1
 
-        c = 1
+        c = 2
 
         if self.option_mode == "Index":
 
