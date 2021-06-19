@@ -73,6 +73,7 @@ class Nse:
             "https://www.nseindia.com/products-services/"
             "equity-derivatives-list-underlyings-information"
         )
+        self.url_bank_nifty: str = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20BANK"
 
         self.headers: Dict[str, str] = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
@@ -317,18 +318,6 @@ class Nse:
         with open("NSE-OCA.ini", "w") as f:
             self.config_parser.write(f)
 
-    # def check_input(self, event):
-    #     value = event.widget.get()
-    #     if value == '':
-    #         self.index_menu['values'] = self.indices
-    #     else:
-    #         data = []
-    #         for item in self.indices:
-    #             if value.lower() in item.lower():
-    #                 data.append(item)
-
-    #         self.index_menu['values'] = data
-
     def search(self):
         value_to_search = self.search_var.get()
         if value_to_search == "" or value_to_search == " ":
@@ -373,6 +362,12 @@ class Nse:
             response = self.session.get(
                 url, headers=self.headers, timeout=5, cookies=self.cookies
             )
+            if self.option_mode == 'Index':
+                response_bn = self.session.get(
+                    self.url_bank_nifty,  headers=self.headers, timeout=5, cookies=self.cookies)
+            else:
+                response_bn = None
+
         except Exception as err:
             print(request)
             print(response)
@@ -422,7 +417,7 @@ class Nse:
         except TclError:
             pass
 
-        return response, json_data
+        return response, response_bn, json_data
 
     def get_data_refresh(self) -> Optional[Tuple[Optional[requests.Response], Any]]:
         request: Optional[requests.Response] = None
@@ -436,7 +431,12 @@ class Nse:
             response = self.session.get(
                 url, headers=self.headers, timeout=5, cookies=self.cookies
             )
-            if response.status_code == 401:
+            if self.option_mode == 'Index':
+                response_bn = self.session.get(
+                    self.url_bank_nifty, headers=self.headers, timeout=5, cookies=self.cookies)
+            else:
+                response_bn = None
+            if response.status_code == 401 or (self.option_mode == 'Index' and response_bn.status_code == 401):
                 self.session.close()
                 self.session = requests.Session()
                 request = self.session.get(
@@ -477,7 +477,7 @@ class Nse:
         if json_data == {}:
             return
 
-        return response, json_data
+        return response, response_bn, json_data
 
     def login_win(self, window: Tk) -> None:
         self.login: Tk = window
@@ -969,6 +969,7 @@ class Nse:
                     f"LTP_Put_{self.sp3}",
                     f"profit/loss\nPut_{self.sp3}",
                     "Net\nprofit/loss",
+                    "Nifty bank\nLTP",
                 )
                 self.csv_headers = self.output_columns
             else:
@@ -1527,7 +1528,7 @@ class Nse:
         try:
             response: Optional[requests.Response]
             json_data: Any
-            response, json_data = self.get_data()
+            response, response_bn, json_data = self.get_data()
         except TypeError:
             return
         if response is None or json_data is None:
@@ -1539,6 +1540,13 @@ class Nse:
 
         df: pandas.DataFrame = pandas.read_json(response.text)
         df = df.transpose()
+
+        if self.option_mode == 'Index':
+            df_bn: pandas.DataFrame = pandas.DataFrame(
+                response_bn.json()["data"])
+
+            self.banknifty_ltp = df_bn[df_bn['symbol']
+                                       == 'NIFTY BANK']['lastPrice'].get(0)
 
         ce_values: List[dict] = [
             data["CE"]
@@ -1624,6 +1632,7 @@ class Nse:
                 self.pe_ltp_3,
                 self.pe_3_profit,
                 self.net_profit,
+                self.banknifty_ltp,
             ]
         else:
             output_values: List[Union[str, float]] = [
@@ -1642,55 +1651,22 @@ class Nse:
 
         last_row: int = self.sheet.get_total_rows() - 1
 
-        c = 2
+        c = 3
 
         if self.option_mode == "Index":
-
-            self.old_ce_ltp_1: float
-            if self.first_run or self.old_ce_ltp_1 == self.ce_ltp_1:
-                self.old_ce_ltp_1 = self.ce_ltp_1
-            elif self.ce_ltp_1 > self.old_ce_ltp_1:
-                self.sheet.highlight_cells(row=last_row, column=c, bg=red)
-                self.old_ce_ltp_1 = self.ce_ltp_1
-            else:
-                self.sheet.highlight_cells(row=last_row, column=c, bg=green)
-                self.old_ce_ltp_1 = self.ce_ltp_1
-
-            c += 1
             if self.ce_1_profit > 0:
                 self.sheet.highlight_cells(row=last_row, column=c, bg=green)
             elif self.ce_1_profit < 0:
                 self.sheet.highlight_cells(row=last_row, column=c, bg=red)
-            c += 1
+            c += 2
 
-        self.old_pe_ltp_1: float
-        if self.first_run or self.old_pe_ltp_1 == self.pe_ltp_1:
-            self.old_pe_ltp_1 = self.pe_ltp_1
-        elif self.pe_ltp_1 > self.old_pe_ltp_1:
-            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
-            self.old_pe_ltp_1 = self.pe_ltp_1
-        else:
-            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
-            self.old_pe_ltp_1 = self.pe_ltp_1
-
-        c += 1
         if self.pe_1_profit > 0:
             self.sheet.highlight_cells(row=last_row, column=c, bg=green)
         elif self.pe_1_profit < 0:
             self.sheet.highlight_cells(row=last_row, column=c, bg=red)
 
-        c += 1
-        self.old_ce_ltp_2: float
-        if self.first_run or self.old_ce_ltp_2 == self.ce_ltp_2:
-            self.old_ce_ltp_2 = self.ce_ltp_2
-        elif self.ce_ltp_2 > self.old_ce_ltp_2:
-            self.sheet.highlight_cells(row=last_row, column=c, bg=red)
-            self.old_ce_ltp_2 = self.ce_ltp_2
-        else:
-            self.sheet.highlight_cells(row=last_row, column=c, bg=green)
-            self.old_ce_ltp_2 = self.ce_ltp_2
+        c += 2
 
-        c += 1
         if self.ce_2_profit > 0:
             self.sheet.highlight_cells(row=last_row, column=c, bg=green)
         elif self.ce_2_profit < 0:
@@ -1699,19 +1675,7 @@ class Nse:
         c += 1
 
         if self.option_mode == "Index":
-
-            self.old_pe_ltp_3: float
-            if self.first_run or self.old_pe_ltp_3 == self.pe_ltp_3:
-                self.old_pe_ltp_3 = self.pe_ltp_3
-            elif self.pe_ltp_3 > self.old_pe_ltp_3:
-                self.sheet.highlight_cells(row=last_row, column=c, bg=green)
-                self.old_pe_ltp_3 = self.pe_ltp_3
-            else:
-                self.sheet.highlight_cells(row=last_row, column=c, bg=red)
-                self.old_pe_ltp_3 = self.pe_ltp_3
-
             c += 1
-
             if self.pe_3_profit > 0:
                 self.sheet.highlight_cells(row=last_row, column=c, bg=green)
             elif self.pe_3_profit < 0:
@@ -1727,6 +1691,7 @@ class Nse:
         if self.sheet.get_yview()[1] >= 0.9:
             self.sheet.see(last_row)
             self.sheet.set_yview(1)
+
         self.sheet.refresh()
 
     def main(self) -> None:
