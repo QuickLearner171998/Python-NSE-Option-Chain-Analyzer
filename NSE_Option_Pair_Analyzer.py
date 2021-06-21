@@ -340,6 +340,7 @@ class Nse:
     def get_data_first_run(self) -> Optional[Tuple[Optional[requests.Response], Any]]:
         request: Optional[requests.Response] = None
         response: Optional[requests.Response] = None
+        response_bn = None
 
         if self.option_mode == "Index":
             self.index = self.index_var.get()
@@ -365,8 +366,6 @@ class Nse:
             if self.option_mode == 'Index':
                 response_bn = self.session.get(
                     self.url_bank_nifty,  headers=self.headers, timeout=5, cookies=self.cookies)
-            else:
-                response_bn = None
 
         except Exception as err:
             print(request)
@@ -422,6 +421,7 @@ class Nse:
     def get_data_refresh(self) -> Optional[Tuple[Optional[requests.Response], Any]]:
         request: Optional[requests.Response] = None
         response: Optional[requests.Response] = None
+        response_bn = None
         url: str = (
             self.url_index + self.index
             if self.option_mode == "Index"
@@ -434,8 +434,7 @@ class Nse:
             if self.option_mode == 'Index':
                 response_bn = self.session.get(
                     self.url_bank_nifty, headers=self.headers, timeout=5, cookies=self.cookies)
-            else:
-                response_bn = None
+
             if response.status_code == 401 or (self.option_mode == 'Index' and response_bn.status_code == 401):
                 self.session.close()
                 self.session = requests.Session()
@@ -569,8 +568,13 @@ class Nse:
         sp_label1: Label = Label(self.login, text="Strike Price 1: ")
         sp_label1.grid(row=r, column=0, sticky=N + S + W)
         self.sp_entry1 = Entry(self.login, width=18, relief=SOLID)
-        self.sp_entry1.insert(0, 35300)
         self.sp_entry1.grid(row=r, column=1, sticky=N + S + E)
+        r += 1
+
+        sp_label1_1: Label = Label(self.login, text="Strike Price 1.1: ")
+        sp_label1_1.grid(row=r, column=0, sticky=N + S + W)
+        self.sp_entry1_1 = Entry(self.login, width=18, relief=SOLID)
+        self.sp_entry1_1.grid(row=r, column=1, sticky=N + S + E)
 
         r += 1
         date_label1: Label = Label(
@@ -624,7 +628,7 @@ class Nse:
 
         r += 1
         val_label2: Label = Label(
-            self.login, text="BUY/SELL VAL for Strike Price1 PE: "
+            self.login, text="BUY/SELL VAL for Strike Price1.1 PE: "
         )
         val_label2.grid(row=r, column=0, sticky=N + S + W)
         self.val_entry2 = Entry(self.login, width=18, relief=SOLID)
@@ -779,6 +783,7 @@ class Nse:
         self.intervals_menu.current(
             self.intervals.index(int(self.seconds / 60)))
         self.sp_entry1.focus_set()
+        self.sp_entry1_1.focus_set()
         self.sp_entry2.focus_set()
         self.sp_entry3.focus_set()
 
@@ -803,6 +808,7 @@ class Nse:
 
             elif mode == 2:
                 self.sp_entry1.focus_set()
+                self.sp_entry1_1.focus_set()
                 self.sp_entry2.focus_set()
                 self.sp_entry3.focus_set()
 
@@ -829,6 +835,7 @@ class Nse:
                              a=2: focus_widget(event, a))
 
         self.sp_entry1.bind("<Return>", self.start)
+        self.sp_entry1_1.bind("<Return>", self.start)
         self.sp_entry2.bind("<Return>", self.start)
         self.sp_entry3.bind("<Return>", self.start)
 
@@ -940,8 +947,9 @@ class Nse:
             self.export_row(None)
         try:
             self.sp1: int = int(self.sp_entry1.get())
+            self.sp1_1: int = int(self.sp_entry1_1.get())
             self.sp2: int = int(self.sp_entry2.get())
-            self.pe_val_1: float = float(self.val_entry2.get())
+            self.pe_val_1_1: float = float(self.val_entry2.get())
             self.ce_val_2: float = float(self.val_entry3.get())
 
             self.qty1_ce: int = int(self.qty_entry1.get())
@@ -962,8 +970,8 @@ class Nse:
                     "Time",
                     f"LTP_Call_{self.sp1}",
                     f"profit/loss\nCall_{self.sp1}",
-                    f"LTP_Put_{self.sp1}",
-                    f"profit/loss\nPut_{self.sp1}",
+                    f"LTP_Put_{self.sp1_1}",
+                    f"profit/loss\nPut_{self.sp1_1}",
                     f"LTP_Call_{self.sp2}",
                     f"profit/loss\nCall_{self.sp2}",
                     f"LTP_Put_{self.sp3}",
@@ -1625,7 +1633,7 @@ class Nse:
                 self.str_current_time,
                 self.ce_ltp_1,
                 self.ce_1_profit,
-                self.pe_ltp_1,
+                self.pe_ltp_1_1,
                 self.pe_1_profit,
                 self.ce_ltp_2,
                 self.ce_2_profit,
@@ -1638,7 +1646,7 @@ class Nse:
             output_values: List[Union[str, float]] = [
                 self.str_current_date,
                 self.str_current_time,
-                self.pe_ltp_1,
+                self.pe_ltp_1_1,
                 self.pe_1_profit,
                 self.ce_ltp_2,
                 self.ce_2_profit,
@@ -1764,6 +1772,10 @@ class Nse:
             index2: int = int(entire_oc_sp_2.index.tolist()[0])
 
             if self.option_mode == "Index":
+                entire_oc_sp_1_1: pandas.DataFrame = entire_oc[(
+                    entire_oc["Strike Price"] == self.sp1_1) & (entire_oc["expiry"] == self.expiry_date1)]
+                index1_1: int = int(entire_oc_sp_1_1.index.tolist()[0])
+
                 entire_oc_sp_3: pandas.DataFrame = entire_oc[(
                     entire_oc["Strike Price"] == self.sp3) & (entire_oc["expiry"] == self.expiry_date2)]
                 index3: int = int(entire_oc_sp_3.index.tolist()[0])
@@ -1779,14 +1791,14 @@ class Nse:
 
         if self.option_mode == "Index":
             ce_ltp_1 = entire_oc_sp_1["Last Traded Price CE"].get(index1)
-        pe_ltp_1 = entire_oc_sp_1["Last Traded Price PE"].get(index1)
+        pe_ltp_1_1 = entire_oc_sp_1_1["Last Traded Price PE"].get(index1_1)
 
         ce_ltp_2 = entire_oc_sp_2["Last Traded Price CE"].get(index2)
 
         if self.option_mode == "Index":
             pe_ltp_3 = entire_oc_sp_3["Last Traded Price PE"].get(index3)
 
-        self.pe_ltp_1: float = round(pe_ltp_1, 3)
+        self.pe_ltp_1_1: float = round(pe_ltp_1_1, 3)
         self.ce_ltp_2: float = round(ce_ltp_2, 3)
 
         if self.option_mode == "Index":
@@ -1795,11 +1807,11 @@ class Nse:
 
         if self.buy_sell_1_pe == "BUY":
             self.pe_1_profit = -1 * round(
-                (self.pe_val_1 - self.pe_ltp_1) * self.qty1_pe, 3
+                (self.pe_val_1_1 - self.pe_ltp_1_1) * self.qty1_pe, 3
             )
         else:
             self.pe_1_profit = round(
-                (self.pe_val_1 - self.pe_ltp_1) * self.qty1_pe, 3)
+                (self.pe_val_1_1 - self.pe_ltp_1_1) * self.qty1_pe, 3)
 
         if self.buy_sell_2_ce == "BUY":
             self.ce_2_profit = round(

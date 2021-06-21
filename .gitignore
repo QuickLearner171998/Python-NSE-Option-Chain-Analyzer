@@ -5,3 +5,4 @@ NSE-OCA.ini
 __pycache__
 NSE-OCA.log
 *.csv
+debug.exe
