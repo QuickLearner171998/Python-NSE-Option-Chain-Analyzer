@@ -6,3 +6,5 @@ __pycache__
 NSE-OCA.log
 *.csv
 debug.exe
+build
+*.spec

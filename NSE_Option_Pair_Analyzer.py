@@ -6,6 +6,8 @@ import platform
 import sys
 import time
 import webbrowser
+import traceback
+
 from tkinter import (
     Tk,
     Toplevel,
@@ -51,6 +53,7 @@ class Nse:
     beta: Tuple[bool, int] = (False, 0)
 
     def __init__(self, window: Tk) -> None:
+        self.timeout = 10
         self.intervals: List[int] = [1, 2, 3, 5, 10, 15]
         self.stdout: TextIO = sys.stdout
         self.stderr: TextIO = sys.stderr
@@ -88,7 +91,8 @@ class Nse:
         self.get_config()
         self.log() if self.logging else None
 
-        self.buy_sell_1_ce = self.buy_sell_1_pe = self.buy_sell_2_ce = self.buy_sell_3_pe = "BUY"
+        self.buy_sell_1_ce = self.buy_sell_1_pe = "SELL"
+        self.buy_sell_2_ce = self.buy_sell_3_pe = "BUY"
 
         self.session: requests.Session = requests.Session()
         self.cookies: Dict[str, str] = {}
@@ -358,14 +362,14 @@ class Nse:
         )
         try:
             request = self.session.get(
-                self.url_oc, headers=self.headers, timeout=5)
+                self.url_oc, headers=self.headers, timeout=self.timeout)
             self.cookies = dict(request.cookies)
             response = self.session.get(
-                url, headers=self.headers, timeout=5, cookies=self.cookies
+                url, headers=self.headers, timeout=self.timeout, cookies=self.cookies
             )
             if self.option_mode == 'Index':
                 response_bn = self.session.get(
-                    self.url_bank_nifty,  headers=self.headers, timeout=5, cookies=self.cookies)
+                    self.url_bank_nifty,  headers=self.headers, timeout=self.timeout, cookies=self.cookies)
 
         except Exception as err:
             print(request)
@@ -412,7 +416,7 @@ class Nse:
             self.date_menu1.config(values=tuple(self.dates))
             self.date_menu1.current(0)
             self.date_menu2.config(values=tuple(self.dates))
-            self.date_menu2.current(1)
+            self.date_menu2.current(0)
         except TclError:
             pass
 
@@ -429,22 +433,22 @@ class Nse:
         )
         try:
             response = self.session.get(
-                url, headers=self.headers, timeout=5, cookies=self.cookies
+                url, headers=self.headers, timeout=self.timeout, cookies=self.cookies
             )
             if self.option_mode == 'Index':
                 response_bn = self.session.get(
-                    self.url_bank_nifty, headers=self.headers, timeout=5, cookies=self.cookies)
+                    self.url_bank_nifty, headers=self.headers, timeout=self.timeout, cookies=self.cookies)
 
             if response.status_code == 401 or (self.option_mode == 'Index' and response_bn.status_code == 401):
                 self.session.close()
                 self.session = requests.Session()
                 request = self.session.get(
-                    self.url_oc, headers=self.headers, timeout=5)
+                    self.url_oc, headers=self.headers, timeout=self.timeout)
                 self.cookies = dict(request.cookies)
                 response = self.session.get(
-                    url, headers=self.headers, timeout=5, cookies=self.cookies
+                    url, headers=self.headers, timeout=self.timeout, cookies=self.cookies
                 )
-                print("reset cookies")
+                print("reset cookies (No Error)")
         except Exception as err:
             print(request)
             print(response)
@@ -453,12 +457,12 @@ class Nse:
                 self.session.close()
                 self.session = requests.Session()
                 request = self.session.get(
-                    self.url_oc, headers=self.headers, timeout=5)
+                    self.url_oc, headers=self.headers, timeout=self.timeout)
                 self.cookies = dict(request.cookies)
                 response = self.session.get(
-                    url, headers=self.headers, timeout=5, cookies=self.cookies
+                    url, headers=self.headers, timeout=self.timeout, cookies=self.cookies
                 )
-                print("reset cookies")
+                print("reset cookies (Error)")
             except Exception as err:
                 print(request)
                 print(response)
@@ -606,7 +610,7 @@ class Nse:
         qty_label1.grid(row=r, column=2, sticky=N + S + W)
         self.qty_entry1 = Entry(self.login, width=10, relief=SOLID)
         if self.option_mode == "Stock":
-            self.qty_entry1.insert(0, 1)
+            self.qty_entry1.insert(0, 100)
         else:
             self.qty_entry1.insert(0, 25)
 
@@ -618,7 +622,7 @@ class Nse:
         buy_sell_label.grid(row=r, column=4, sticky=N + S + W)
         self.buy_sell_label_1_ce_btn: Button = Button(
             self.login,
-            text="BUY",
+            text="SELL",
             command=self.change_buy_mode_1_ce,
             width=5,
         )
@@ -638,7 +642,7 @@ class Nse:
         qty_label2.grid(row=r, column=2, sticky=N + S + W)
         self.qty_entry2 = Entry(self.login, width=10, relief=SOLID)
         if self.option_mode == "Stock":
-            self.qty_entry2.insert(0, 1)
+            self.qty_entry2.insert(0, 100)
         else:
             self.qty_entry2.insert(0, 25)
 
@@ -650,7 +654,7 @@ class Nse:
         buy_sell_label.grid(row=r, column=4, sticky=N + S + W)
         self.buy_sell_label_1_pe_btn: Button = Button(
             self.login,
-            text="BUY",
+            text="SELL",
             command=self.change_buy_mode_1_pe,
             width=5,
         )
@@ -663,7 +667,6 @@ class Nse:
         sp_label2: Label = Label(self.login, text="Strike Price 2 (FOR CE): ")
         sp_label2.grid(row=r, column=0, sticky=N + S + W)
         self.sp_entry2 = Entry(self.login, width=18, relief=SOLID)
-        self.sp_entry2.insert(0, 36100)
         self.sp_entry2.grid(row=r, column=1, sticky=N + S + E)
 
         r += 1
@@ -693,7 +696,7 @@ class Nse:
         qty_label3.grid(row=r, column=2, sticky=N + S + W)
         self.qty_entry3 = Entry(self.login, width=10, relief=SOLID)
         if self.option_mode == "Stock":
-            self.qty_entry3.insert(0, 1)
+            self.qty_entry3.insert(0, 100)
         else:
             self.qty_entry3.insert(0, 25)
 
@@ -741,7 +744,7 @@ class Nse:
         qty_label4.grid(row=r, column=2, sticky=N + S + W)
         self.qty_entry4 = Entry(self.login, width=10, relief=SOLID)
         if self.option_mode == "Stock":
-            self.qty_entry4.insert(0, 1)
+            self.qty_entry4.insert(0, 100)
         else:
             self.qty_entry4.insert(0, 25)
 
@@ -866,10 +869,10 @@ class Nse:
             self.qty_entry3.delete(0, END)
             self.qty_entry4.delete(0, END)
 
-            self.qty_entry1.insert(0, 1)
-            self.qty_entry2.insert(0, 1)
-            self.qty_entry3.insert(0, 1)
-            self.qty_entry4.insert(0, 1)
+            self.qty_entry1.insert(0, 100)
+            self.qty_entry2.insert(0, 100)
+            self.qty_entry3.insert(0, 100)
+            self.qty_entry4.insert(0, 100)
 
         else:
             self.option_mode = "Index"
@@ -1540,6 +1543,8 @@ class Nse:
         except TypeError:
             return
         if response is None or json_data is None:
+            print("response : ", response)
+            print("returning line 1547")
             return
 
         pandas.set_option("display.max_rows", None)
@@ -1548,13 +1553,17 @@ class Nse:
 
         df: pandas.DataFrame = pandas.read_json(response.text)
         df = df.transpose()
-
-        if self.option_mode == 'Index':
-            df_bn: pandas.DataFrame = pandas.DataFrame(
-                response_bn.json()["data"])
-
-            self.banknifty_ltp = df_bn[df_bn['symbol']
-                                       == 'NIFTY BANK']['lastPrice'].get(0)
+        try:
+            if self.option_mode == 'Index':
+                df_bn: pandas.DataFrame = pandas.DataFrame(
+                    response_bn.json()["data"])
+                self.banknifty_ltp = df_bn[df_bn['symbol']
+                                           == 'NIFTY BANK']['lastPrice'].get(0)
+        except:
+            print("Line 1561, RESPONSE_BN", response_bn)
+            traceback.print_exc()
+            print(self.str_current_time)
+            self.banknifty_ltp = -1
 
         ce_values: List[dict] = [
             data["CE"]
@@ -1781,11 +1790,18 @@ class Nse:
                 index3: int = int(entire_oc_sp_3.index.tolist()[0])
 
         except IndexError as err:
-            print(err, sys.exc_info()[0], "10")
+            print(err, sys.exc_info(), "\n", "10", "line 1791")
             messagebox.showerror(
                 title="Error",
                 message="Incorrect Strike Price.\nPlease enter correct Strike Price.",
             )
+            print("saving entire DF")
+            entire_oc.to_csv("entire_df.csv")
+
+            print(entire_oc_sp_1_1)
+
+            entire_oc_sp_1_1.to_csv("entire_oc_sp_1_1.csv")
+
             self.root.destroy()
             return
 
