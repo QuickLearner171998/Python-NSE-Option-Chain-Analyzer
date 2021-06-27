@@ -7,6 +7,8 @@ import sys
 import time
 import webbrowser
 import traceback
+import matplotlib.pyplot as plt
+
 
 from tkinter import (
     Tk,
@@ -211,16 +213,7 @@ class Nse:
                 self.create_config(attribute="seconds")
                 self.seconds: int = self.config_parser.getint(
                     "main", "seconds")
-            try:
-                self.live_export: bool = self.config_parser.getboolean(
-                    "main", "live_export"
-                )
-            except (configparser.NoOptionError, ValueError) as err:
-                print(err, sys.exc_info()[0], "0")
-                self.create_config(attribute="live_export")
-                self.live_export: bool = self.config_parser.getboolean(
-                    "main", "live_export"
-                )
+
             try:
                 self.save_oc: bool = self.config_parser.getboolean(
                     "main", "save_oc")
@@ -293,7 +286,6 @@ class Nse:
             self.config_parser.set("main", "stock", self.stocks[0])
             self.config_parser.set("main", "option_mode", "Index")
             self.config_parser.set("main", "seconds", "60")
-            self.config_parser.set("main", "live_export", "False")
             self.config_parser.set("main", "save_oc", "False")
             self.config_parser.set("main", "notifications", "False")
             self.config_parser.set("main", "auto_stop", "False")
@@ -309,7 +301,6 @@ class Nse:
             elif attribute == "seconds":
                 self.config_parser.set("main", "seconds", "60")
             elif attribute in (
-                "live_export",
                 "save_oc",
                 "notifications",
                 "auto_stop",
@@ -572,12 +563,14 @@ class Nse:
         sp_label1: Label = Label(self.login, text="Strike Price 1: ")
         sp_label1.grid(row=r, column=0, sticky=N + S + W)
         self.sp_entry1 = Entry(self.login, width=18, relief=SOLID)
+        self.sp_entry1.insert(0, 34500)
         self.sp_entry1.grid(row=r, column=1, sticky=N + S + E)
         r += 1
 
         sp_label1_1: Label = Label(self.login, text="Strike Price 1.1: ")
         sp_label1_1.grid(row=r, column=0, sticky=N + S + W)
         self.sp_entry1_1 = Entry(self.login, width=18, relief=SOLID)
+        self.sp_entry1_1.insert(0, 34500)
         self.sp_entry1_1.grid(row=r, column=1, sticky=N + S + E)
 
         r += 1
@@ -667,6 +660,7 @@ class Nse:
         sp_label2: Label = Label(self.login, text="Strike Price 2 (FOR CE): ")
         sp_label2.grid(row=r, column=0, sticky=N + S + W)
         self.sp_entry2 = Entry(self.login, width=18, relief=SOLID)
+        self.sp_entry2.insert(0, 34500)
         self.sp_entry2.grid(row=r, column=1, sticky=N + S + E)
 
         r += 1
@@ -946,8 +940,7 @@ class Nse:
                 message="Incorrect Expiry Date.\nPlease enter correct Expiry Date.",
             )
             return
-        if self.live_export:
-            self.export_row(None)
+
         try:
             self.sp1: int = int(self.sp_entry1.get())
             self.sp1_1: int = int(self.sp_entry1_1.get())
@@ -1057,8 +1050,7 @@ class Nse:
             print(err, sys.exc_info()[0], "12")
             messagebox.showerror(
                 title="Export Failed",
-                message=f"Failed to access NSE-OCA-"
-                f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv"
+                message=f"Failed to access "
                 f"Permission Denied. Try closing any apps using it.",
             )
         except Exception as err:
@@ -1067,77 +1059,6 @@ class Nse:
                 title="Export Failed",
                 message="An error occurred while exporting the data.",
             )
-
-    def export_row(self, values: Optional[List[Union[str, float]]]) -> None:
-        if values is None:
-            csv_exists: bool = os.path.isfile(
-                f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv"
-            )
-            try:
-                if not csv_exists:
-                    with open(
-                        f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv",
-                        "a",
-                        newline="",
-                    ) as row:
-                        data_writer: csv.writer = csv.writer(row)
-                        data_writer.writerow(self.csv_headers)
-            except PermissionError as err:
-                print(err, sys.exc_info()[0], "13")
-                messagebox.showerror(
-                    title="Export Failed",
-                    message=f"Failed to access NSE-OCA-"
-                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv \n"
-                    f"Permission Denied. Try closing any apps using it.",
-                )
-            except Exception as err:
-                print(err, sys.exc_info()[0], "9")
-        else:
-            try:
-                with open(
-                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv",
-                    "a",
-                    newline="",
-                ) as row:
-                    data_writer: csv.writer = csv.writer(row)
-                    data_writer.writerow(values)
-            except PermissionError as err:
-                print(err, sys.exc_info()[0], "14")
-                messagebox.showerror(
-                    title="Export Failed",
-                    message=f"Failed to access NSE-OCA-"
-                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv \n"
-                    f"Permission Denied. Try closing any apps using it.",
-                )
-            except Exception as err:
-                print(err, sys.exc_info()[0], "15")
-
-    # noinspection PyUnusedLocal
-    def toggle_live_export(self, event: Optional[Event] = None) -> None:
-        if self.live_export:
-            self.live_export = False
-            self.options.entryconfig(
-                self.options.index(2), label="Live Exporting to CSV: Off"
-            )
-            messagebox.showinfo(
-                title="Live Exporting Disabled",
-                message="Data rows will not be exported.",
-            )
-        else:
-            self.live_export = True
-            self.options.entryconfig(
-                self.options.index(2), label="Live Exporting to CSV: On"
-            )
-            messagebox.showinfo(
-                title="Live Exporting Enabled",
-                message=f"Data rows will be exported in real time to "
-                f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}.csv",
-            )
-
-        self.config_parser.set("main", "live_export", f"{self.live_export}")
-        with open("NSE-OCA.ini", "w") as f:
-            self.config_parser.write(f)
-        self.export_row(None)
 
     # noinspection PyUnusedLocal
     def toggle_save_oc(self, event: Optional[Event] = None) -> None:
@@ -1407,6 +1328,9 @@ class Nse:
 
     # noinspection PyUnusedLocal
     def close_main(self, event: Optional[Event] = None) -> None:
+        # save before closing
+        self.export()
+        self.save_chart()
         ask_quit: bool = messagebox.askyesno(
             "Quit", "Proceed to quit?", icon="warning", default="no"
         )
@@ -1420,6 +1344,24 @@ class Nse:
             sys.exit()
         elif not ask_quit:
             pass
+
+    def save_chart(self, event: Optional[Event] = None):
+
+        sheet_data: List[List[str]] = self.sheet.get_sheet_data()
+        sheet_df = pandas.DataFrame(sheet_data, columns=self.csv_headers)
+
+        # sheet_df = pandas.read_csv(
+        #     r"D:\coolStuff\NSE_DATA_FETCH\NSE-OCA-BANKNIFTY-01-Jul-2021-24-Jun-2021.csv")
+        plt.figure(figsize=(120, 20))
+        plt.plot(sheet_df["Time"], sheet_df["Net\nprofit/loss"],
+                 color='red', marker='o')
+        plt.title('NET PROFIT WITH TIME', fontsize=14)
+        plt.xlabel('TIME', fontsize=14)
+        plt.xticks(rotation=45)
+        plt.ylabel('NET PROFIT', fontsize=14)
+        plt.grid(True)
+        plt.savefig(
+            f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}-NET PROFIT.png", bbox_inches='tight')
 
     def main_win(self) -> None:
         self.root: Tk = Tk()
@@ -1446,10 +1388,8 @@ class Nse:
             label="Export Table to CSV", accelerator="(Ctrl+S)", command=self.export
         )
         self.options.add_command(
-            label=f"Live Exporting to CSV: {'On' if self.live_export else 'Off'}",
-            accelerator="(Ctrl+B)",
-            command=self.toggle_live_export,
-        )
+            label="Save Net Profit Chart", accelerator="(Ctrl+P)", command=self.save_chart)
+
         self.options.add_command(
             label=f"Dump Entire Option Chain to CSV: {'On' if self.save_oc else 'Off'}",
             accelerator="(Ctrl+O)",
@@ -1478,18 +1418,19 @@ class Nse:
             accelerator="(Ctrl+L)",
             command=self.log,
         )
+
         self.options.add_command(
             label="About", accelerator="(Ctrl+M)", command=self.about
         )
         self.options.add_command(
             label="Quit", accelerator="(Ctrl+Q)", command=self.close_main
         )
+
         menubar.add_cascade(label="Menu", menu=self.options)
         self.root.config(menu=menubar)
 
         self.root.bind("<Control-x>", self.change_state)
         self.root.bind("<Control-s>", self.export)
-        self.root.bind("<Control-b>", self.toggle_live_export)
         self.root.bind("<Control-o>", self.toggle_save_oc)
         self.root.bind(
             "<Control-n>", self.toggle_notifications
@@ -1499,6 +1440,7 @@ class Nse:
         self.root.bind("<Control-l>", self.log)
         self.root.bind("<Control-m>", self.about)
         self.root.bind("<Control-q>", self.close_main)
+        self.root.bind("<Control-p>", self.save_chart)
 
         top_frame: Frame = Frame(self.root)
         top_frame.rowconfigure(0, weight=1)
@@ -1529,9 +1471,10 @@ class Nse:
                 "select_all",
             )
         )
+
         self.sheet.grid(row=0, column=0, sticky=N + S + W + E)
 
-        self.root.after(100, self.main)
+        self.root.after(50, self.main)
 
         self.root.mainloop()
 
@@ -1629,7 +1572,7 @@ class Nse:
     def set_values(self) -> None:
         if self.first_run:
             self.root.title(
-                f"NSE-Option-Chain-Analyzer - {self.index if self.option_mode == 'Index' else self.stock} "
+                f"NSE Option Chain Analyzer - {self.index if self.option_mode == 'Index' else self.stock} "
                 f"- {self.expiry_date1} - {self.expiry_date2}"
             )
 
@@ -1663,8 +1606,6 @@ class Nse:
             ]
 
         self.sheet.insert_row(values=output_values)
-        if self.live_export:
-            self.export_row(output_values)
 
         last_row: int = self.sheet.get_total_rows() - 1
 
@@ -1798,9 +1739,9 @@ class Nse:
             print("saving entire DF")
             entire_oc.to_csv("entire_df.csv")
 
-            print(entire_oc_sp_1_1)
-
-            entire_oc_sp_1_1.to_csv("entire_oc_sp_1_1.csv")
+            if self.option_mode == "Index":
+                print(entire_oc_sp_1_1)
+                entire_oc_sp_1_1.to_csv("entire_oc_sp_1_1.csv")
 
             self.root.destroy()
             return
@@ -1877,7 +1818,7 @@ class Nse:
         if self.save_oc:
             try:
                 entire_oc.to_csv(
-                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-Full.csv",
+                    f"NSE-OCA-{self.index if self.option_mode == 'Index' else self.stock}-{self.expiry_date1}-{self.expiry_date2}-Full.csv",
                     index=False,
                 )
 
@@ -1885,9 +1826,7 @@ class Nse:
                 print(err, sys.exc_info()[0], "11")
                 messagebox.showerror(
                     title="Export Failed",
-                    message=f"Failed to access NSE-OCA-"
-                    f"{self.index if self.option_mode == 'Index' else self.stock}-"
-                    f"{self.expiry_date1}-Full.csv.\n"
+                    message=f"Failed to access"
                     f"Permission Denied. Try closing any apps using it.",
                 )
             except Exception as err:
